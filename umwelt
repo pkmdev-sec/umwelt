@@ -1,0 +1,1089 @@
+#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  bang — Claude Code Context Automation Framework             ║
+# ║  Pre-prompt context injection for AI-assisted development    ║
+# ╠══════════════════════════════════════════════════════════════╣
+# ║  Usage:                                                      ║
+# ║    bang <loader> [flags]        Run a context loader          ║
+# ║    bang profile <name> [flags]  Run a context profile         ║
+# ║    bang list                    List available loaders         ║
+# ║    bang compose <l1> <l2> ...   Compose multiple loaders      ║
+# ║    bang hook-config             Generate hook JSON             ║
+# ║    bang install                 Install bang to PATH           ║
+# ║    bang --help                  Show this help                 ║
+# ╚══════════════════════════════════════════════════════════════╝
+set -euo pipefail
+
+VERSION="2.0.0"
+BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+LOADERS_DIR="$BANG_DIR/loaders"
+PROFILES_DIR="$BANG_DIR/profiles"
+
+# ─── Innovation Libraries ─────────────────────────────────────
+[ -f "$BANG_DIR/lib/diff-engine.sh" ] && source "$BANG_DIR/lib/diff-engine.sh"
+[ -f "$BANG_DIR/lib/token-budget.sh" ] && source "$BANG_DIR/lib/token-budget.sh"
+[ -f "$BANG_DIR/lib/cache-split.sh" ] && source "$BANG_DIR/lib/cache-split.sh"
+
+# Global flags
+BANG_DIFF_MODE="${BANG_DIFF_MODE:-0}"
+BANG_MODEL_FLAG=""
+BANG_BUDGET_FLAG=""
+
+# ─── jq Availability Check ──────────────────────────────────────
+if ! command -v jq &>/dev/null; then
+  echo "Warning: jq is not installed. JSON processing will fall back to python3." >&2
+  echo "Install jq for better performance: brew install jq (macOS) or apt-get install jq (Linux)" >&2
+  if ! command -v python3 &>/dev/null; then
+    echo "Error: Neither jq nor python3 is available. Please install one of them." >&2
+    exit 1
+  fi
+fi
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+# ─── Help ────────────────────────────────────────────────────────
+show_help() {
+  cat <<'EOF'
+bang — Claude Code Context Automation Framework v1.1.0
+
+USAGE
+  bang <command> [options]
+
+COMMANDS
+  Loaders (individual context sources):
+    git-context [--full|--minimal|--diff]   Git state, branch, commits, diffs
+    test-status [--run|--last|--coverage]   Test framework detection and results
+    env-summary [--full|--minimal]          Shell, runtimes, env vars, resources
+    docker-status [--full|--minimal]        Containers, compose, images
+    deps-audit [--full]                     Dependencies, lock files, vulnerabilities
+    project-summary [--full]                Project structure, tech stack, entry points
+    api-health [--full]                     Local service and API endpoint health
+
+  Profiles (combined loader packages):
+    profile dev [--full]           Development context (git + tests + env + project)
+    profile review [base-branch]   Code review context (diff + comparison + tests)
+    profile deploy                 Pre-deploy checklist (git + deps + docker + APIs)
+    profile debug                  Debug context (env + docker logs + errors + procs)
+
+  Smart Loading (Innovations 4/9):
+    event <event> [bash_cmd]       Run event-optimized loaders for a hook event
+    predict <message>              Run loaders predicted from message keywords
+    smart <event> [message]        Combine event routing + prediction
+    cached-context                 Cache-split output (stable + volatile sections)
+
+  Innovation flags (v1.1):
+    --diff                         Enable diff-based injection (skip unchanged)
+    --model <opus|sonnet|haiku>    Set model tier for profile selection
+    --budget <N>                   Set token budget (default: 10000)
+
+  Management:
+    list                           List all available loaders and profiles
+    compose <l1> <l2> ...          Run multiple loaders in sequence
+    hook-config [event] [profile]  Generate hook JSON for settings.json
+      --type <command|prompt|agent> Hook type (default: command)
+    hook-vars [event]              Show available hook template variables
+    env-config [category]          Generate .env config from RE findings
+      Categories: performance, cost, security, debug, privacy, compaction
+    install                        Symlink bang to ~/.local/bin/
+    test [loader|profile|all]      Run self-tests
+    --help, -h                     Show this help
+    --version, -v                  Show version
+
+BANG SYNTAX IN CLAUDE CODE
+  In Claude Code CLI, prefix commands with ! to inject output before LLM processing:
+
+    !`bang profile dev`            Load full dev context before your prompt
+    !`bang git-context --diff`     Inject git diff before asking about code
+    !`bang compose git-context test-status`  Combine multiple loaders
+
+ENVIRONMENT
+  BANG_DIR             Override framework directory (default: ~/.claude/bang-framework)
+  BANG_PROJECT_DIR     Override project directory (default: .)
+  BANG_API_ENDPOINTS   Comma-separated API URLs for api-health loader
+
+EXAMPLES
+  # In Claude Code, load context before a prompt:
+  !`bang profile dev` Fix the failing tests in the auth module
+
+  # Pre-deploy check:
+  !`bang profile deploy` Is this safe to ship?
+
+  # Quick git + test status:
+  !`bang compose git-context test-status` What should I work on next?
+
+  # Code review with base branch:
+  !`bang profile review develop` Review my changes
+
+  # Generate a hook that auto-injects on every prompt:
+  bang hook-config UserPromptSubmit dev >> ~/.claude/settings.json
+EOF
+}
+
+# ─── List ────────────────────────────────────────────────────────
+list_all() {
+  echo -e "${BOLD}Available Loaders:${NC}"
+  for f in "$LOADERS_DIR"/*.sh; do
+    if [ -f "$f" ]; then
+      NAME=$(basename "$f" .sh)
+      DESC=$(head -3 "$f" | grep "^# bang-framework:" | sed 's/# bang-framework: //' || echo "")
+      printf "  ${GREEN}%-20s${NC} %s\n" "$NAME" "$DESC"
+    fi
+  done
+
+  echo ""
+  echo -e "${BOLD}Available Profiles:${NC}"
+  for f in "$PROFILES_DIR"/*.sh; do
+    if [ -f "$f" ]; then
+      NAME=$(basename "$f" .sh)
+      DESC=$(head -3 "$f" | grep "^# bang-framework profile:" | sed 's/# bang-framework profile: //' || echo "")
+      printf "  ${CYAN}%-20s${NC} %s\n" "$NAME" "$DESC"
+    fi
+  done
+}
+
+# ─── Compose ─────────────────────────────────────────────────────
+compose_loaders() {
+  local loaders=("$@")
+  if [ ${#loaders[@]} -eq 0 ]; then
+    echo -e "${RED}Error: compose requires at least one loader name${NC}" >&2
+    echo "Usage: bang compose git-context test-status env-summary" >&2
+    exit 1
+  fi
+
+  for loader in "${loaders[@]}"; do
+    LOADER_PATH="$LOADERS_DIR/${loader}.sh"
+    if [ -f "$LOADER_PATH" ]; then
+      "$LOADER_PATH"
+      echo ""
+    else
+      echo -e "${YELLOW}Warning: loader '${loader}' not found, skipping${NC}" >&2
+    fi
+  done
+}
+
+# ─── Hook Config Generator ──────────────────────────────────────
+generate_hook_config() {
+  local event="${1:-UserPromptSubmit}"
+  local profile="${2:-dev}"
+  local hook_type="command"
+
+  # Parse --type flag
+  local args=("$@")
+  for i in "${!args[@]}"; do
+    if [ "${args[$i]}" = "--type" ] && [ $((i+1)) -lt ${#args[@]} ]; then
+      hook_type="${args[$((i+1))]}"
+      # Remove --type and its value from positional args
+      if [ $i -eq 0 ]; then event="${args[2]:-UserPromptSubmit}"; fi
+    fi
+  done
+
+  # Validate hook type (3 types from RE analysis)
+  local valid_types="command prompt agent"
+  if ! echo "$valid_types" | grep -qw "$hook_type"; then
+    echo -e "${RED}Error: invalid hook type '${hook_type}'${NC}" >&2
+    echo "Valid types: ${valid_types}" >&2
+    echo "  command — run a shell command, output becomes context" >&2
+    echo "  prompt  — LLM prompt with template variables" >&2
+    echo "  agent   — spawn an agent with template variables" >&2
+    exit 1
+  fi
+
+  # Validate event name (all 7 events from RE analysis of Claude Code v2.1.71)
+  local valid_events="UserPromptSubmit SessionStart SubagentStart PreToolUse PostToolUse PreCompact Stop"
+  if ! echo "$valid_events" | grep -qw "$event"; then
+    echo -e "${RED}Error: invalid hook event '${event}'${NC}" >&2
+    echo "Valid events: ${valid_events}" >&2
+    exit 1
+  fi
+
+  # Check if profile or loader
+  if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
+    CMD="$BANG_DIR/profiles/${profile}.sh"
+  elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
+    CMD="$BANG_DIR/loaders/${profile}.sh"
+  else
+    echo -e "${RED}Error: '${profile}' is not a valid profile or loader${NC}" >&2
+    exit 1
+  fi
+
+  # Generate JSON based on hook type (RE: 3 types — command, prompt, agent)
+  case "$hook_type" in
+    command)
+      cat <<ENDJSON
+{
+  "hooks": [
+    {
+      "type": "command",
+      "command": "${CMD}",
+      "statusMessage": "bang: loading ${profile} context",
+      "timeout": 30
+    }
+  ]
+}
+ENDJSON
+      ;;
+    prompt)
+      cat <<ENDJSON
+{
+  "hooks": [
+    {
+      "type": "prompt",
+      "prompt": "Process the output of ${profile} context loader and summarize the key points. Available variables: {{sessionMemory}}, {{userMessages}}, {{docContents}}",
+      "statusMessage": "bang: AI-processing ${profile} context"
+    }
+  ]
+}
+ENDJSON
+      ;;
+    agent)
+      cat <<ENDJSON
+{
+  "hooks": [
+    {
+      "type": "agent",
+      "prompt": "Analyze the ${profile} context and provide actionable recommendations. Variables: {{sessionMemory}}, {{userMessages}}, {{customInstructions}}",
+      "statusMessage": "bang: agent analyzing ${profile} context"
+    }
+  ]
+}
+ENDJSON
+      ;;
+  esac
+
+  echo "" >&2
+  echo -e "${GREEN}Add this to your settings.json under hooks.${event}[]${NC}" >&2
+  echo -e "Or use: ${CYAN}bang install-hook ${event} ${profile}${NC}" >&2
+}
+
+# ─── Install Hook ────────────────────────────────────────────────
+install_hook() {
+  local event="${1:-}"
+  local profile="${2:-}"
+
+  if [ -z "$event" ] || [ -z "$profile" ]; then
+    echo -e "${RED}Usage: bang install-hook <event> <profile|loader>${NC}" >&2
+    echo "Example: bang install-hook UserPromptSubmit dev" >&2
+    exit 1
+  fi
+
+  # Determine command path
+  local cmd=""
+  if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
+    cmd="$BANG_DIR/profiles/${profile}.sh"
+  elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
+    cmd="$BANG_DIR/loaders/${profile}.sh"
+  else
+    echo -e "${RED}Error: '${profile}' not found${NC}" >&2
+    exit 1
+  fi
+
+  local settings_file="$HOME/.claude/settings.json"
+  if [ ! -f "$settings_file" ]; then
+    echo -e "${RED}Error: settings.json not found at ${settings_file}${NC}" >&2
+    exit 1
+  fi
+
+  # Use jq to safely modify JSON (with python3 fallback)
+  if command -v jq &>/dev/null; then
+    # Check if already installed
+    local already_installed
+    already_installed=$(jq --arg event "$event" --arg cmd "$cmd" '
+      .hooks[$event] // [] |
+      map(.hooks // [] | map(select(.command == $cmd))) |
+      flatten |
+      length > 0
+    ' "$settings_file")
+
+    if [ "$already_installed" = "true" ]; then
+      echo -e "${YELLOW}Hook already installed for ${event} → ${profile}${NC}"
+      return 0
+    fi
+
+    # Add the hook using jq
+    jq --arg event "$event" \
+       --arg cmd "$cmd" \
+       --arg profile "$profile" '
+      .hooks[$event] += [{
+        "hooks": [{
+          "type": "command",
+          "command": $cmd,
+          "statusMessage": ("bang: loading " + $profile + " context"),
+          "timeout": 30
+        }]
+      }]
+    ' "$settings_file" > "${settings_file}.tmp" && mv "${settings_file}.tmp" "$settings_file"
+  else
+    # Python3 fallback
+    python3 -c "
+import json, sys
+
+with open('$settings_file') as f:
+    settings = json.load(f)
+
+hooks = settings.setdefault('hooks', {})
+event_hooks = hooks.setdefault('$event', [])
+
+# Check if already installed
+new_cmd = '$cmd'
+for entry in event_hooks:
+    for h in entry.get('hooks', []):
+        if h.get('command', '') == new_cmd:
+            print('Hook already installed for $event -> $profile', file=sys.stderr)
+            sys.exit(0)
+
+# Add the hook
+event_hooks.append({
+    'hooks': [{
+        'type': 'command',
+        'command': new_cmd,
+        'statusMessage': 'bang: loading $profile context',
+        'timeout': 30
+    }]
+})
+
+with open('$settings_file', 'w') as f:
+    json.dump(settings, f, indent=2)
+
+print('Hook installed: $event -> $profile', file=sys.stderr)
+" 2>&1
+  fi
+
+  echo -e "${GREEN}Installed hook: ${event} → ${profile}${NC}"
+}
+
+# ─── Uninstall Hook ──────────────────────────────────────────────
+uninstall_hook() {
+  local event="${1:-}"
+  local profile="${2:-}"
+
+  if [ -z "$event" ] || [ -z "$profile" ]; then
+    echo -e "${RED}Usage: bang uninstall-hook <event> <profile|loader>${NC}" >&2
+    exit 1
+  fi
+
+  local cmd=""
+  if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
+    cmd="$BANG_DIR/profiles/${profile}.sh"
+  elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
+    cmd="$BANG_DIR/loaders/${profile}.sh"
+  else
+    echo -e "${RED}Error: '${profile}' not found${NC}" >&2
+    exit 1
+  fi
+
+  local settings_file="$HOME/.claude/settings.json"
+
+  # Use jq to safely modify JSON (with python3 fallback)
+  if command -v jq &>/dev/null; then
+    # Remove the hook using jq
+    jq --arg event "$event" --arg cmd "$cmd" '
+      .hooks[$event] |= map(
+        .hooks |= map(select(.command != $cmd))
+        | select(.hooks | length > 0)
+      )
+    ' "$settings_file" > "${settings_file}.tmp" && mv "${settings_file}.tmp" "$settings_file"
+  else
+    # Python3 fallback
+    python3 -c "
+import json
+
+with open('$settings_file') as f:
+    settings = json.load(f)
+
+hooks = settings.get('hooks', {})
+event_hooks = hooks.get('$event', [])
+
+# Filter out matching hooks
+new_event_hooks = []
+removed = False
+for entry in event_hooks:
+    keep = True
+    for h in entry.get('hooks', []):
+        if h.get('command', '') == '$cmd':
+            keep = False
+            removed = True
+    if keep:
+        new_event_hooks.append(entry)
+
+if removed:
+    hooks['$event'] = new_event_hooks
+    with open('$settings_file', 'w') as f:
+        json.dump(settings, f, indent=2)
+    print('Removed')
+else:
+    print('NotFound')
+" 2>/dev/null
+  fi
+
+  echo -e "${GREEN}Uninstalled hook: ${event} → ${profile}${NC}"
+}
+
+# ─── Hook Variables (Gap 1.3) ────────────────────────────────────
+show_hook_vars() {
+  local event="${1:-all}"
+
+  echo -e "${BOLD}Hook Template Variables${NC} (from RE analysis)"
+  echo "────────────────────────────────────────────────"
+  echo ""
+
+  echo -e "${BOLD}Command hooks:${NC}"
+  echo "  \$FILE         — path of the file being operated on"
+  echo "  \$ARGUMENTS    — tool arguments as JSON string"
+  echo ""
+
+  echo -e "${BOLD}Prompt/Agent hooks:${NC}"
+  echo "  {{sessionMemory}}      — current session memory/context"
+  echo "  {{userMessages}}       — recent user messages"
+  echo "  {{docContents}}        — content of relevant documents"
+  echo "  {{customInstructions}} — user's custom instructions"
+  echo "  {{currentNotes}}       — current session notes"
+  echo ""
+
+  echo -e "${BOLD}Events and their typical variable usage:${NC}"
+  printf "  %-20s %s\n" "UserPromptSubmit" "\$FILE, {{userMessages}}"
+  printf "  %-20s %s\n" "SessionStart" "{{customInstructions}}"
+  printf "  %-20s %s\n" "SubagentStart" "{{sessionMemory}}"
+  printf "  %-20s %s\n" "PreToolUse" "\$FILE, \$ARGUMENTS"
+  printf "  %-20s %s\n" "PostToolUse" "\$FILE, \$ARGUMENTS"
+  printf "  %-20s %s\n" "PreCompact" "{{sessionMemory}}, {{currentNotes}}"
+  printf "  %-20s %s\n" "Stop" "{{sessionMemory}}"
+}
+
+# ─── Env Config Generator (Gap 1.4) ─────────────────────────────
+generate_env_config() {
+  local category="${1:-all}"
+
+  echo -e "${BOLD}Claude Code Environment Configuration${NC} (from RE analysis)"
+  echo "═══════════════════════════════════════════════════"
+  echo ""
+
+  if [ "$category" = "all" ] || [ "$category" = "performance" ]; then
+    echo -e "${CYAN}# Performance${NC}"
+    echo "export CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3"
+    echo "export CLAUDE_CODE_EAGER_FLUSH=1"
+    echo "export CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS=4000"
+    echo ""
+  fi
+
+  if [ "$category" = "all" ] || [ "$category" = "cost" ]; then
+    echo -e "${CYAN}# Cost Optimization${NC}"
+    echo "export CLAUDE_CODE_DISABLE_THINKING=1      # saves tokens, lower quality"
+    echo "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=16000  # cap output length"
+    echo ""
+  fi
+
+  if [ "$category" = "all" ] || [ "$category" = "security" ]; then
+    echo -e "${CYAN}# Security (keep defaults — do not disable)${NC}"
+    echo "# CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK=1  # DANGEROUS — never in prod"
+    echo "# CLAUDE_CODE_GLOB_NO_IGNORE=1                   # DANGEROUS — exposes .env"
+    echo "# CLAUDE_CODE_GLOB_HIDDEN=1                      # DANGEROUS — exposes .ssh"
+    echo "export CLAUDE_CODE_BUBBLEWRAP=1                   # sandboxing (recommended)"
+    echo ""
+  fi
+
+  if [ "$category" = "all" ] || [ "$category" = "debug" ]; then
+    echo -e "${CYAN}# Diagnostics${NC}"
+    echo "export CLAUDE_CODE_DIAGNOSTICS_FILE=\"\$HOME/.claude/diagnostics.json\""
+    echo "export CLAUDE_CODE_DEBUG_LOGS_DIR=\"\$HOME/.claude/debug\""
+    echo ""
+  fi
+
+  if [ "$category" = "all" ] || [ "$category" = "privacy" ]; then
+    echo -e "${CYAN}# Privacy${NC}"
+    echo "export CLAUDE_CODE_ENABLE_TELEMETRY=0"
+    echo "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
+    echo ""
+  fi
+
+  if [ "$category" = "all" ] || [ "$category" = "compaction" ]; then
+    echo -e "${CYAN}# Context Management${NC}"
+    echo "export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=92  # default 92%"
+    echo ""
+  fi
+
+  echo -e "${DIM}# Save: bang env-config > ~/.claude/.env${NC}"
+  echo -e "${DIM}# Load: source ~/.claude/.env${NC}"
+}
+
+# ─── Install to PATH ─────────────────────────────────────────────
+install_to_path() {
+  local bin_dir="$HOME/.local/bin"
+  mkdir -p "$bin_dir"
+
+  ln -sf "$BANG_DIR/bang" "$bin_dir/bang"
+  echo -e "${GREEN}Installed: ${bin_dir}/bang → ${BANG_DIR}/bang${NC}"
+
+  # Check if in PATH
+  if echo "$PATH" | grep -q "$bin_dir"; then
+    echo -e "${GREEN}~/.local/bin is already in PATH${NC}"
+  else
+    echo -e "${YELLOW}Add to your shell profile:${NC}"
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+  fi
+}
+
+# ─── Self-Test ───────────────────────────────────────────────────
+run_tests() {
+  local target="${1:-all}"
+  local passed=0
+  local failed=0
+  local total=0
+  local assertions_checked=0
+
+  # Basic test: run command, check non-empty output
+  test_one() {
+    local name="$1"
+    local cmd="$2"
+    total=$((total + 1))
+    echo -ne "  testing ${name}... "
+    local OUTPUT=""
+    if OUTPUT=$(eval "$cmd" 2>&1); then
+      if [ -n "$OUTPUT" ]; then
+        echo -e "${GREEN}PASS${NC}"
+        passed=$((passed + 1))
+      else
+        echo -e "${RED}FAIL (empty output)${NC}"
+        failed=$((failed + 1))
+      fi
+    else
+      local ec=$?
+      echo -e "${RED}FAIL (exit code $ec)${NC}"
+      echo "    ${OUTPUT}" | head -3
+      failed=$((failed + 1))
+    fi
+  }
+
+  # Assert: run command, check output contains expected pattern
+  assert_contains() {
+    local name="$1"
+    local cmd="$2"
+    local pattern="$3"
+    total=$((total + 1))
+    assertions_checked=$((assertions_checked + 1))
+    echo -ne "  assert ${name}... "
+    local OUTPUT=""
+    if OUTPUT=$(eval "$cmd" 2>&1); then
+      if echo "$OUTPUT" | grep -qE "$pattern"; then
+        echo -e "${GREEN}PASS${NC}"
+        passed=$((passed + 1))
+      else
+        echo -e "${RED}FAIL (pattern not found: ${pattern})${NC}"
+        echo "    got: $(echo "$OUTPUT" | head -2)"
+        failed=$((failed + 1))
+      fi
+    else
+      local ec=$?
+      echo -e "${RED}FAIL (exit code $ec)${NC}"
+      echo "    ${OUTPUT}" | head -3
+      failed=$((failed + 1))
+    fi
+  }
+
+  # Assert valid JSON output
+  assert_json() {
+    local name="$1"
+    local cmd="$2"
+    total=$((total + 1))
+    assertions_checked=$((assertions_checked + 1))
+    echo -ne "  assert ${name} (JSON)... "
+    local OUTPUT=""
+    if OUTPUT=$(eval "$cmd" 2>&1); then
+      local is_valid=false
+      if command -v jq &>/dev/null; then
+        if echo "$OUTPUT" | jq empty 2>/dev/null; then is_valid=true; fi
+      else
+        if echo "$OUTPUT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then is_valid=true; fi
+      fi
+
+      if [ "$is_valid" = "true" ]; then
+        echo -e "${GREEN}PASS${NC}"
+        passed=$((passed + 1))
+      else
+        echo -e "${RED}FAIL (invalid JSON)${NC}"
+        echo "    got: $(echo "$OUTPUT" | head -2)"
+        failed=$((failed + 1))
+      fi
+    else
+      local ec=$?
+      echo -e "${RED}FAIL (exit code $ec)${NC}"
+      echo "    ${OUTPUT}" | head -3
+      failed=$((failed + 1))
+    fi
+  }
+
+  # Assert JSON has a specific key
+  assert_json_key() {
+    local name="$1"
+    local cmd="$2"
+    local key="$3"
+    total=$((total + 1))
+    assertions_checked=$((assertions_checked + 1))
+    echo -ne "  assert ${name} (key: ${key})... "
+    local OUTPUT=""
+    if OUTPUT=$(eval "$cmd" 2>&1); then
+      local has_key=false
+      if command -v jq &>/dev/null; then
+        if echo "$OUTPUT" | jq -e "has(\"$key\")" &>/dev/null; then has_key=true; fi
+      else
+        if echo "$OUTPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert '$key' in d, 'missing key'" 2>/dev/null; then has_key=true; fi
+      fi
+
+      if [ "$has_key" = "true" ]; then
+        echo -e "${GREEN}PASS${NC}"
+        passed=$((passed + 1))
+      else
+        echo -e "${RED}FAIL (key '$key' not found)${NC}"
+        failed=$((failed + 1))
+      fi
+    else
+      local ec=$?
+      echo -e "${RED}FAIL (exit code $ec)${NC}"
+      failed=$((failed + 1))
+    fi
+  }
+
+  echo -e "${BOLD}Running bang self-tests...${NC}"
+  echo ""
+
+  if [ "$target" = "all" ] || [ "$target" = "loader" ] || [ "$target" = "loaders" ]; then
+    echo -e "${BOLD}Loaders (text output):${NC}"
+    for f in "$LOADERS_DIR"/*.sh; do
+      NAME=$(basename "$f" .sh)
+      test_one "$NAME" "'$f'"
+    done
+    echo ""
+
+    echo -e "${BOLD}Loader assertions:${NC}"
+    # env-summary: must report OS and shell
+    assert_contains "env-summary:os" "'$LOADERS_DIR/env-summary.sh'" "os:"
+    assert_contains "env-summary:shell" "'$LOADERS_DIR/env-summary.sh'" "shell:"
+    assert_contains "env-summary:runtimes" "'$LOADERS_DIR/env-summary.sh'" "runtimes:"
+    # env-summary: delimiters
+    assert_contains "env-summary:start" "'$LOADERS_DIR/env-summary.sh'" "=== ENVIRONMENT ==="
+    assert_contains "env-summary:end" "'$LOADERS_DIR/env-summary.sh'" "=== END ENVIRONMENT ==="
+    # deps-audit: must report type
+    assert_contains "deps-audit:type" "'$LOADERS_DIR/deps-audit.sh'" "type:"
+    assert_contains "deps-audit:delimiters" "'$LOADERS_DIR/deps-audit.sh'" "=== (DEPENDENCY AUDIT|END)"
+    # project-summary: must have dir and file counts
+    assert_contains "project-summary:dir" "'$LOADERS_DIR/project-summary.sh'" "dir:"
+    assert_contains "project-summary:delimiters" "'$LOADERS_DIR/project-summary.sh'" "=== PROJECT SUMMARY ==="
+    # docker: must show status
+    assert_contains "docker-status:delimiters" "'$LOADERS_DIR/docker-status.sh'" "=== DOCKER STATUS ==="
+    # api-health: must show delimiters
+    assert_contains "api-health:delimiters" "'$LOADERS_DIR/api-health.sh'" "=== API HEALTH ==="
+    # test-status: must show delimiters
+    assert_contains "test-status:delimiters" "'$LOADERS_DIR/test-status.sh'" "=== TEST STATUS ==="
+    echo ""
+
+    echo -e "${BOLD}Loader JSON output:${NC}"
+    assert_json "env-summary --json" "'$LOADERS_DIR/env-summary.sh' --json"
+    assert_json_key "env-summary:os" "'$LOADERS_DIR/env-summary.sh' --json" "os"
+    assert_json_key "env-summary:runtimes" "'$LOADERS_DIR/env-summary.sh' --json" "runtimes"
+    assert_json "deps-audit --json" "'$LOADERS_DIR/deps-audit.sh' --json"
+    assert_json_key "deps-audit:type" "'$LOADERS_DIR/deps-audit.sh' --json" "project_type"
+    assert_json "docker-status --json" "'$LOADERS_DIR/docker-status.sh' --json"
+    assert_json_key "docker:installed" "'$LOADERS_DIR/docker-status.sh' --json" "docker_installed"
+    assert_json "project-summary --json" "'$LOADERS_DIR/project-summary.sh' --json"
+    assert_json_key "project:dir" "'$LOADERS_DIR/project-summary.sh' --json" "directory"
+    assert_json "api-health --json" "'$LOADERS_DIR/api-health.sh' --json"
+    assert_json "test-status --json" "'$LOADERS_DIR/test-status.sh' --json"
+    echo ""
+
+    echo -e "${BOLD}Loader modes:${NC}"
+    assert_contains "env --minimal" "'$LOADERS_DIR/env-summary.sh' --minimal" "=== END ENVIRONMENT ==="
+    assert_contains "env --full:resources" "'$LOADERS_DIR/env-summary.sh' --full" "resources"
+    echo ""
+  fi
+
+  if [ "$target" = "all" ] || [ "$target" = "config" ]; then
+    echo -e "${BOLD}Config system:${NC}"
+    test_one "config:source" "source '$BANG_DIR/lib/config.sh' && echo \"\$BANG_SCAN_DEPTH\""
+    assert_contains "config:defaults" "source '$BANG_DIR/lib/config.sh' && echo \$BANG_SCAN_DEPTH" "^[0-9]+$"
+    assert_contains "config:ports" "source '$BANG_DIR/lib/config.sh' && echo \$BANG_LOCAL_PORTS" "[0-9]"
+    echo ""
+  fi
+
+  if [ "$target" = "all" ] || [ "$target" = "profile" ] || [ "$target" = "profiles" ]; then
+    echo -e "${BOLD}Profiles:${NC}"
+    for f in "$PROFILES_DIR"/*.sh; do
+      NAME=$(basename "$f" .sh)
+      test_one "profile:$NAME" "'$f'"
+    done
+    echo ""
+  fi
+
+  if [ "$target" = "all" ] || [ "$target" = "cli" ]; then
+    echo -e "${BOLD}CLI:${NC}"
+    test_one "list" "'$BANG_DIR/bang' list"
+    test_one "help" "'$BANG_DIR/bang' --help"
+    test_one "version" "'$BANG_DIR/bang' --version"
+    test_one "compose" "'$BANG_DIR/bang' compose git-context env-summary"
+    test_one "hook-config" "'$BANG_DIR/bang' hook-config UserPromptSubmit dev"
+    echo ""
+
+    echo -e "${BOLD}CLI assertions:${NC}"
+    assert_contains "help:usage" "'$BANG_DIR/bang' --help" "USAGE"
+    assert_contains "help:loaders" "'$BANG_DIR/bang' --help" "git-context"
+    assert_contains "version:format" "'$BANG_DIR/bang' --version" "^bang v[0-9]"
+    assert_contains "list:loaders" "'$BANG_DIR/bang' list" "git-context"
+    assert_contains "list:profiles" "'$BANG_DIR/bang' list" "dev"
+    assert_contains "hook:json" "'$BANG_DIR/bang' hook-config UserPromptSubmit dev" "hooks"
+    echo ""
+  fi
+
+  echo "════════════════════════════════════════"
+  echo -e "  Results: ${GREEN}${passed} passed${NC}, ${RED}${failed} failed${NC}, ${total} total"
+  echo -e "  Assertions checked: ${assertions_checked}"
+  echo "════════════════════════════════════════"
+
+  if [ "$failed" -gt 0 ]; then
+    exit 1
+  fi
+}
+
+# ─── Event-Routed Execution (Innovation 4) ──────────────────────
+# Runs loaders based on event type, applying smart filtering
+run_event() {
+  local event="${1:-SessionStart}"
+  local bash_cmd="${2:-}"
+
+  # Source event router
+  if [ ! -f "$BANG_DIR/lib/event-router.sh" ]; then
+    echo -e "${RED}Error: event-router.sh not found${NC}" >&2
+    exit 1
+  fi
+  source "$BANG_DIR/lib/event-router.sh"
+
+  local loaders
+  loaders=$(route_event "$event" "$bash_cmd")
+
+  if [ -z "$loaders" ]; then
+    echo -e "${DIM}[bang:event-route] ${event}: no loaders needed${NC}" >&2
+    return 0
+  fi
+
+  echo -e "${DIM}[bang:event-route] ${event}: running ${loaders}${NC}" >&2
+
+  for loader in $loaders; do
+    LOADER_PATH="$LOADERS_DIR/${loader}.sh"
+    if [ -f "$LOADER_PATH" ]; then
+      "$LOADER_PATH"
+      echo ""
+    fi
+  done
+
+  # Record run timestamps
+  record_loader_runs $loaders
+}
+
+# ─── Predictive Compose (Innovation 9) ──────────────────────────
+# Runs loaders predicted to be relevant based on user message content
+predict_run() {
+  local message="$*"
+
+  if [ -z "$message" ]; then
+    echo -e "${RED}Error: predict requires a message${NC}" >&2
+    echo "Usage: bang predict \"your message about what you're working on\"" >&2
+    exit 1
+  fi
+
+  # Source predictor
+  if [ ! -f "$BANG_DIR/lib/predictor.sh" ]; then
+    echo -e "${RED}Error: predictor.sh not found${NC}" >&2
+    exit 1
+  fi
+  source "$BANG_DIR/lib/predictor.sh"
+
+  local loaders
+  loaders=$(predict_needed_loaders "$message")
+
+  if [ -z "$loaders" ]; then
+    echo -e "${DIM}[bang:predict] No loaders matched message keywords${NC}" >&2
+    return 0
+  fi
+
+  echo -e "${DIM}[bang:predict] Running predicted loaders: ${loaders}${NC}" >&2
+
+  for loader in $loaders; do
+    LOADER_PATH="$LOADERS_DIR/${loader}.sh"
+    if [ -f "$LOADER_PATH" ]; then
+      "$LOADER_PATH"
+      echo ""
+    fi
+  done
+}
+
+# ─── Smart Compose (event-router + predictor) ──────────────────
+# Combines event routing with predictive loading for UserPromptSubmit
+smart_compose() {
+  local event="${1:-UserPromptSubmit}"
+  local message="${2:-}"
+
+  # Source both systems
+  [ -f "$BANG_DIR/lib/event-router.sh" ] && source "$BANG_DIR/lib/event-router.sh"
+  [ -f "$BANG_DIR/lib/predictor.sh" ] && source "$BANG_DIR/lib/predictor.sh"
+
+  local event_loaders=""
+  local predicted_loaders=""
+
+  # Get event-based loaders
+  if type route_event &>/dev/null; then
+    event_loaders=$(route_event "$event")
+  fi
+
+  # Get prediction-based loaders if message provided
+  if [ -n "$message" ] && type predict_needed_loaders &>/dev/null; then
+    predicted_loaders=$(predict_needed_loaders "$message")
+  fi
+
+  # Merge and deduplicate (predicted loaders take priority ordering)
+  local all_loaders=""
+  for loader in $predicted_loaders $event_loaders; do
+    if ! echo " $all_loaders " | grep -q " $loader "; then
+      all_loaders="$all_loaders $loader"
+    fi
+  done
+  all_loaders=$(echo "$all_loaders" | sed 's/^ //')
+
+  if [ -z "$all_loaders" ]; then
+    return 0
+  fi
+
+  echo -e "${DIM}[bang:smart] ${event}: running ${all_loaders}${NC}" >&2
+
+  for loader in $all_loaders; do
+    LOADER_PATH="$LOADERS_DIR/${loader}.sh"
+    if [ -f "$LOADER_PATH" ]; then
+      "$LOADER_PATH"
+      echo ""
+    fi
+  done
+
+  # Record timestamps
+  if type record_loader_runs &>/dev/null; then
+    record_loader_runs $all_loaders
+  fi
+}
+
+# ─── Diff-Aware Compose (Innovation 10) ──────────────────────
+diff_compose_loaders() {
+  local loaders=("$@")
+  for loader in "${loaders[@]}"; do
+    LOADER_PATH="$LOADERS_DIR/${loader}.sh"
+    if [ -f "$LOADER_PATH" ]; then
+      local output
+      output=$("$LOADER_PATH" 2>&1)
+      if diff_inject "$loader" "$output"; then
+        echo "$output"
+        echo ""
+      else
+        echo "[${loader}: unchanged — skipped]"
+      fi
+    else
+      echo -e "${YELLOW}Warning: loader '${loader}' not found, skipping${NC}" >&2
+    fi
+  done
+}
+
+# ─── Token-Budget Wrapper (Innovation 1) ─────────────────────
+budget_run_profile() {
+  local profile="$1"
+  shift
+
+  if type should_downgrade &>/dev/null; then
+    local recommended
+    recommended=$(should_downgrade "$profile")
+    if [ "$recommended" != "$profile" ]; then
+      echo "[bang:budget] Downgrading ${profile} -> ${recommended} ($(budget_status_line))" >&2
+      profile="$recommended"
+    fi
+  fi
+
+  if [ "$profile" = "silent" ]; then
+    echo "[bang:budget] Token budget exhausted — silent mode" >&2
+    return 0
+  fi
+
+  local PROFILE_PATH="$PROFILES_DIR/${profile}.sh"
+  if [ -f "$PROFILE_PATH" ]; then
+    local output
+    output=$("$PROFILE_PATH" "$@" 2>&1)
+    if type track_tokens &>/dev/null; then
+      track_tokens "$output" >/dev/null
+    fi
+    echo "$output"
+  else
+    echo -e "${RED}Error: profile '${profile}' not found${NC}" >&2
+    return 1
+  fi
+}
+
+# ─── Main ────────────────────────────────────────────────────────
+main() {
+  if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+  fi
+
+  # ─── Parse global flags (--diff, --model, --budget) ────────
+  local args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --diff)
+        BANG_DIFF_MODE=1
+        shift
+        ;;
+      --model)
+        BANG_MODEL_FLAG="${2:-sonnet}"
+        shift 2
+        ;;
+      --budget)
+        BANG_BUDGET_FLAG="${2:-10000}"
+        export BANG_TOKEN_BUDGET="$BANG_BUDGET_FLAG"
+        shift 2
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+  set -- "${args[@]+"${args[@]}"}"
+
+  if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+  fi
+
+  local cmd="$1"
+  shift
+
+  case "$cmd" in
+    --help|-h)
+      show_help
+      ;;
+    --version|-v)
+      echo "bang v${VERSION}"
+      ;;
+    list)
+      list_all
+      ;;
+    compose)
+      if [ "$BANG_DIFF_MODE" = "1" ]; then
+        diff_compose_loaders "$@"
+      else
+        compose_loaders "$@"
+      fi
+      ;;
+    cached-context)
+      format_cached_output
+      ;;
+    profile)
+      local profile="${1:-}"
+      shift || true
+      if [ -z "$profile" ]; then
+        echo -e "${RED}Error: specify a profile name${NC}" >&2
+        echo "Available: dev, review, deploy, debug, minimal" >&2
+        exit 1
+      fi
+      # Model override: haiku → force minimal
+      if [ -n "$BANG_MODEL_FLAG" ]; then
+        case "$BANG_MODEL_FLAG" in
+          *haiku*|*Haiku*) profile="minimal" ;;
+        esac
+      fi
+      # Budget-aware execution
+      if [ -n "$BANG_BUDGET_FLAG" ]; then
+        budget_run_profile "$profile" "$@"
+      else
+        PROFILE_PATH="$PROFILES_DIR/${profile}.sh"
+        if [ -f "$PROFILE_PATH" ]; then
+          "$PROFILE_PATH" "$@"
+        else
+          echo -e "${RED}Error: profile '${profile}' not found${NC}" >&2
+          echo "Available:" >&2
+          ls "$PROFILES_DIR"/*.sh 2>/dev/null | xargs -I{} basename {} .sh | sed 's/^/  /' >&2
+          exit 1
+        fi
+      fi
+      ;;
+    hook-config)
+      generate_hook_config "$@"
+      ;;
+    hook-vars)
+      show_hook_vars "$@"
+      ;;
+    env-config)
+      generate_env_config "$@"
+      ;;
+    install-hook)
+      install_hook "$@"
+      ;;
+    uninstall-hook)
+      uninstall_hook "$@"
+      ;;
+    event)
+      run_event "$@"
+      ;;
+    predict)
+      predict_run "$@"
+      ;;
+    smart)
+      smart_compose "$@"
+      ;;
+    unified)
+      if [ -f "$BANG_DIR/lib/unified-engine.sh" ]; then
+        source "$BANG_DIR/lib/unified-engine.sh"
+        assemble_unified_context "${1:-UserPromptSubmit}" "${2:-}"
+      else
+        echo -e "${RED}Error: unified-engine.sh not found${NC}" >&2
+        exit 1
+      fi
+      ;;
+    cost)
+      if [ -f "$BANG_DIR/lib/cost-tracker.sh" ]; then
+        "$BANG_DIR/lib/cost-tracker.sh" "${1:-status}"
+      else
+        echo -e "${RED}Error: cost-tracker.sh not found${NC}" >&2
+        exit 1
+      fi
+      ;;
+    install)
+      install_to_path
+      ;;
+    test)
+      run_tests "$@"
+      ;;
+    *)
+      # Try as a loader name
+      LOADER_PATH="$LOADERS_DIR/${cmd}.sh"
+      if [ -f "$LOADER_PATH" ]; then
+        if [ "$BANG_DIFF_MODE" = "1" ]; then
+          local output
+          output=$("$LOADER_PATH" "$@" 2>&1)
+          if diff_inject "$cmd" "$output"; then
+            echo "$output"
+          else
+            echo "[${cmd}: unchanged — skipped]"
+          fi
+        else
+          "$LOADER_PATH" "$@"
+        fi
+      else
+        echo -e "${RED}Error: unknown command '${cmd}'${NC}" >&2
+        echo "Run 'bang --help' for usage." >&2
+        exit 1
+      fi
+      ;;
+  esac
+}
+
+main "$@"

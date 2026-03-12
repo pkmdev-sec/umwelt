@@ -1,0 +1,292 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img">
+  <title>UMWELT — Environment Intelligence Framework</title>
+  <desc>A perceptual field radiating from a central sensing node — representing Jakob von Uexküll's Umwelt concept: the organism's self-centered world constructed through environmental perception. Concentric scanning rings with data nodes on the perimeter evoke environmental awareness.</desc>
+
+  <defs>
+    <!-- Central glow filter -->
+    <filter id="coreGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Outer shadow for depth -->
+    <filter id="outerShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#020617" flood-opacity="0.7"/>
+    </filter>
+
+    <!-- Scan pulse glow -->
+    <filter id="scanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Node glow -->
+    <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Background — pitch black with subtle green center -->
+    <radialGradient id="bgGrad" cx="50%" cy="48%" r="55%">
+      <stop offset="0%" stop-color="#052E16"/>
+      <stop offset="40%" stop-color="#022C22"/>
+      <stop offset="70%" stop-color="#011A14"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+
+    <!-- Primary gradient — emerald to teal -->
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Accent gradient — cyan perception -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+
+    <!-- Warm accent — amber awareness -->
+    <linearGradient id="warmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+
+    <!-- Central core — bright emerald -->
+    <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ECFDF5"/>
+      <stop offset="30%" stop-color="#6EE7B7"/>
+      <stop offset="70%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </radialGradient>
+
+    <!-- Scan ring gradients -->
+    <linearGradient id="ring1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <linearGradient id="ring2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0891B2" stop-opacity="0.25"/>
+    </linearGradient>
+
+    <linearGradient id="ring3Grad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#047857" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0E7490" stop-opacity="0.15"/>
+    </linearGradient>
+
+    <!-- Radial scan lines -->
+    <linearGradient id="scanLineGradA" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <linearGradient id="scanLineGradB" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+
+    <!-- Outer containment ring -->
+    <linearGradient id="outerRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.5"/>
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ==================== BACKGROUND ==================== -->
+  <circle cx="256" cy="256" r="250" fill="url(#bgGrad)"/>
+
+  <!-- Outer containment — the Umwelt boundary -->
+  <circle cx="256" cy="256" r="242" fill="none" stroke="url(#outerRingGrad)" stroke-width="1.5"/>
+  <circle cx="256" cy="256" r="238" fill="none" stroke="#059669" stroke-width="0.5" opacity="0.15"/>
+
+  <!-- ==================== SCANNING RINGS ==================== -->
+  <!-- Three concentric perception rings — the expanding Umwelt -->
+
+  <!-- Outer ring — farthest perception -->
+  <g filter="url(#outerShadow)">
+    <circle cx="256" cy="256" r="190" fill="none" stroke="url(#ring3Grad)" stroke-width="1.5" stroke-dasharray="8 4"/>
+  </g>
+
+  <!-- Middle ring — active scanning zone -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#ring2Grad)" stroke-width="2" stroke-dasharray="12 6"/>
+
+  <!-- Inner ring — immediate awareness -->
+  <g filter="url(#scanGlow)">
+    <circle cx="256" cy="256" r="85" fill="none" stroke="url(#ring1Grad)" stroke-width="2.5"/>
+  </g>
+
+  <!-- ==================== RADIAL SCAN LINES ==================== -->
+  <!-- 8 sensing channels radiating from center to environment -->
+
+  <!-- Cardinal lines — primary sensors -->
+  <g filter="url(#scanGlow)">
+    <line x1="256" y1="171" x2="256" y2="66" stroke="url(#scanLineGradA)" stroke-width="1.5" opacity="0.6"/>
+    <line x1="256" y1="341" x2="256" y2="446" stroke="url(#scanLineGradA)" stroke-width="1.5" opacity="0.6"/>
+    <line x1="171" y1="256" x2="66" y2="256" stroke="url(#scanLineGradB)" stroke-width="1.5" opacity="0.6"/>
+    <line x1="341" y1="256" x2="446" y2="256" stroke="url(#scanLineGradB)" stroke-width="1.5" opacity="0.6"/>
+  </g>
+
+  <!-- Diagonal lines — secondary sensors -->
+  <line x1="196" y1="196" x2="122" y2="122" stroke="#10B981" stroke-width="1" opacity="0.35"/>
+  <line x1="316" y1="196" x2="390" y2="122" stroke="#10B981" stroke-width="1" opacity="0.35"/>
+  <line x1="316" y1="316" x2="390" y2="390" stroke="#06B6D4" stroke-width="1" opacity="0.35"/>
+  <line x1="196" y1="316" x2="122" y2="390" stroke="#06B6D4" stroke-width="1" opacity="0.35"/>
+
+  <!-- ==================== HEXAGONAL CORE ==================== -->
+  <!-- The perceiving entity — hexagon represents structured sensing -->
+  <g filter="url(#outerShadow)">
+    <polygon
+      points="256,186 317,221 317,291 256,326 195,291 195,221"
+      fill="none"
+      stroke="url(#primaryGrad)"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- Inner hexagon — tighter focus -->
+  <polygon
+    points="256,206 301,231 301,281 256,306 211,281 211,231"
+    fill="#10B981"
+    fill-opacity="0.06"
+    stroke="#34D399"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+    opacity="0.6"
+  />
+
+  <!-- ==================== DATA NODES — ENVIRONMENT POINTS ==================== -->
+  <!-- Outer ring nodes — the 7 loaders sensing the environment -->
+
+  <!-- Top: git-context -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="256" cy="66" r="7" fill="#34D399" opacity="0.9"/>
+    <circle cx="256" cy="66" r="3.5" fill="#ECFDF5"/>
+  </g>
+
+  <!-- Top-right: test-status -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="390" cy="122" r="6" fill="#10B981" opacity="0.8"/>
+    <circle cx="390" cy="122" r="3" fill="#D1FAE5"/>
+  </g>
+
+  <!-- Right: env-summary -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="446" cy="256" r="7" fill="#06B6D4" opacity="0.9"/>
+    <circle cx="446" cy="256" r="3.5" fill="#CFFAFE"/>
+  </g>
+
+  <!-- Bottom-right: docker-status -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="390" cy="390" r="6" fill="#0891B2" opacity="0.8"/>
+    <circle cx="390" cy="390" r="3" fill="#CFFAFE"/>
+  </g>
+
+  <!-- Bottom: deps-audit -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="256" cy="446" r="7" fill="#06B6D4" opacity="0.9"/>
+    <circle cx="256" cy="446" r="3.5" fill="#CFFAFE"/>
+  </g>
+
+  <!-- Bottom-left: project-summary -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="122" cy="390" r="6" fill="#0891B2" opacity="0.8"/>
+    <circle cx="122" cy="390" r="3" fill="#CFFAFE"/>
+  </g>
+
+  <!-- Left: api-health -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="66" cy="256" r="7" fill="#10B981" opacity="0.9"/>
+    <circle cx="66" cy="256" r="3.5" fill="#D1FAE5"/>
+  </g>
+
+  <!-- Top-left (bonus node) -->
+  <circle cx="122" cy="122" r="5" fill="#34D399" opacity="0.6"/>
+  <circle cx="122" cy="122" r="2.5" fill="#ECFDF5" opacity="0.7"/>
+
+  <!-- ==================== MIDDLE RING NODES ==================== -->
+  <!-- Intersection points on the middle scanning ring -->
+  <circle cx="256" cy="116" r="4" fill="#34D399" opacity="0.7"/>
+  <circle cx="396" cy="256" r="4" fill="#06B6D4" opacity="0.7"/>
+  <circle cx="256" cy="396" r="4" fill="#06B6D4" opacity="0.7"/>
+  <circle cx="116" cy="256" r="4" fill="#34D399" opacity="0.7"/>
+
+  <!-- Diagonal mid-ring nodes -->
+  <circle cx="355" cy="157" r="3" fill="#10B981" opacity="0.5"/>
+  <circle cx="355" cy="355" r="3" fill="#0891B2" opacity="0.5"/>
+  <circle cx="157" cy="355" r="3" fill="#0891B2" opacity="0.5"/>
+  <circle cx="157" cy="157" r="3" fill="#10B981" opacity="0.5"/>
+
+  <!-- ==================== CENTRAL NODE ==================== -->
+  <!-- The perceiving core — where all environmental data converges -->
+  <g filter="url(#coreGlow)">
+    <circle cx="256" cy="256" r="16" fill="url(#coreGrad)"/>
+    <circle cx="256" cy="256" r="8" fill="#6EE7B7"/>
+    <circle cx="256" cy="256" r="4" fill="#ECFDF5" opacity="0.95"/>
+  </g>
+
+  <!-- ==================== PERCEPTION ARCS ==================== -->
+  <!-- Curved flow lines showing data flowing inward -->
+  <path d="M 122,122 Q 190,160 196,196" fill="none" stroke="#34D399" stroke-width="1" opacity="0.25"/>
+  <path d="M 390,122 Q 322,160 316,196" fill="none" stroke="#10B981" stroke-width="1" opacity="0.25"/>
+  <path d="M 390,390 Q 322,352 316,316" fill="none" stroke="#06B6D4" stroke-width="1" opacity="0.25"/>
+  <path d="M 122,390 Q 190,352 196,316" fill="none" stroke="#0891B2" stroke-width="1" opacity="0.25"/>
+
+  <!-- Upper perception arc -->
+  <path d="M 150,100 Q 256,140 362,100" fill="none" stroke="#34D399" stroke-width="0.8" opacity="0.2"/>
+  <!-- Lower perception arc -->
+  <path d="M 150,412 Q 256,372 362,412" fill="none" stroke="#06B6D4" stroke-width="0.8" opacity="0.2"/>
+  <!-- Left perception arc -->
+  <path d="M 100,150 Q 140,256 100,362" fill="none" stroke="#10B981" stroke-width="0.8" opacity="0.2"/>
+  <!-- Right perception arc -->
+  <path d="M 412,150 Q 372,256 412,362" fill="none" stroke="#0891B2" stroke-width="0.8" opacity="0.2"/>
+
+  <!-- ==================== TICK MARKS ==================== -->
+  <!-- Small marks on the outer ring — measurement/calibration feel -->
+  <line x1="256" y1="52" x2="256" y2="60" stroke="#34D399" stroke-width="1" opacity="0.4"/>
+  <line x1="256" y1="452" x2="256" y2="460" stroke="#06B6D4" stroke-width="1" opacity="0.4"/>
+  <line x1="52" y1="256" x2="60" y2="256" stroke="#10B981" stroke-width="1" opacity="0.4"/>
+  <line x1="452" y1="256" x2="460" y2="256" stroke="#0891B2" stroke-width="1" opacity="0.4"/>
+
+  <!-- Diagonal tick marks -->
+  <line x1="108" y1="108" x2="114" y2="114" stroke="#34D399" stroke-width="1" opacity="0.3"/>
+  <line x1="398" y1="108" x2="404" y2="114" stroke="#10B981" stroke-width="1" opacity="0.3"/>
+  <line x1="398" y1="398" x2="404" y2="404" stroke="#06B6D4" stroke-width="1" opacity="0.3"/>
+  <line x1="108" y1="398" x2="114" y2="404" stroke="#0891B2" stroke-width="1" opacity="0.3"/>
+
+  <!-- ==================== AMBIENT PARTICLES ==================== -->
+  <!-- Tiny environmental data particles -->
+  <circle cx="180" cy="98" r="1.5" fill="#34D399" opacity="0.3"/>
+  <circle cx="332" cy="98" r="1.5" fill="#34D399" opacity="0.3"/>
+  <circle cx="420" cy="180" r="1.5" fill="#10B981" opacity="0.25"/>
+  <circle cx="420" cy="332" r="1.5" fill="#06B6D4" opacity="0.25"/>
+  <circle cx="332" cy="414" r="1.5" fill="#06B6D4" opacity="0.3"/>
+  <circle cx="180" cy="414" r="1.5" fill="#0891B2" opacity="0.3"/>
+  <circle cx="92" cy="332" r="1.5" fill="#0891B2" opacity="0.25"/>
+  <circle cx="92" cy="180" r="1.5" fill="#10B981" opacity="0.25"/>
+
+  <!-- Extra depth particles -->
+  <circle cx="210" cy="130" r="1" fill="#6EE7B7" opacity="0.2"/>
+  <circle cx="302" cy="130" r="1" fill="#6EE7B7" opacity="0.2"/>
+  <circle cx="370" cy="210" r="1" fill="#67E8F9" opacity="0.2"/>
+  <circle cx="370" cy="302" r="1" fill="#67E8F9" opacity="0.2"/>
+  <circle cx="302" cy="382" r="1" fill="#67E8F9" opacity="0.2"/>
+  <circle cx="210" cy="382" r="1" fill="#67E8F9" opacity="0.2"/>
+  <circle cx="142" cy="302" r="1" fill="#6EE7B7" opacity="0.2"/>
+  <circle cx="142" cy="210" r="1" fill="#6EE7B7" opacity="0.2"/>
+</svg>

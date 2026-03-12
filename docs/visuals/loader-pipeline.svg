@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" role="img">
+  <title>Umwelt Loader Pipeline — 7 Parallel Sensors</title>
+
+  <defs>
+    <linearGradient id="lp_emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/><stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="lp_teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2DD4BF"/><stop offset="100%" stop-color="#0D9488"/>
+    </linearGradient>
+    <linearGradient id="lp_cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE"/><stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+    <linearGradient id="lp_sky" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/><stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <linearGradient id="lp_violet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/><stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="lp_amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/><stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="lp_rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FB7185"/><stop offset="100%" stop-color="#E11D48"/>
+    </linearGradient>
+    <filter id="lp_shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <marker id="lp_arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#34D399"/>
+    </marker>
+    <marker id="lp_arrowW" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#E2E8F0"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#020617" rx="10"/>
+
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" fill="#34D399" font-family="monospace" font-size="16" font-weight="bold">Loader Pipeline — 7 Parallel Environment Sensors</text>
+
+  <!-- Input trigger -->
+  <rect x="320" y="55" width="160" height="36" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1" filter="url(#lp_shadow)"/>
+  <text x="400" y="77" text-anchor="middle" fill="#E2E8F0" font-family="monospace" font-size="11" font-weight="bold">umwelt profile dev</text>
+
+  <!-- Fan-out lines from trigger to loaders -->
+  <line x1="400" y1="91" x2="70" y2="140" stroke="#34D399" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="175" y2="140" stroke="#2DD4BF" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="280" y2="140" stroke="#22D3EE" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="400" y2="140" stroke="#38BDF8" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="520" y2="140" stroke="#A78BFA" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="625" y2="140" stroke="#FCD34D" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="91" x2="730" y2="140" stroke="#FB7185" stroke-width="1" opacity="0.3"/>
+
+  <!-- === 7 LOADER BOXES === -->
+
+  <!-- 1. git-context -->
+  <rect x="20" y="140" width="100" height="150" rx="6" fill="#052E16" stroke="#059669" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="20" y="140" width="100" height="28" rx="6" fill="url(#lp_emerald)" opacity="0.3"/>
+  <text x="70" y="158" text-anchor="middle" fill="#34D399" font-family="monospace" font-size="9" font-weight="bold">git-context</text>
+  <text x="70" y="182" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="8">branch</text>
+  <text x="70" y="196" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="8">status</text>
+  <text x="70" y="210" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="8">commits</text>
+  <text x="70" y="224" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="8">diffs</text>
+  <text x="70" y="238" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="8">stash</text>
+  <text x="70" y="270" text-anchor="middle" fill="#059669" font-family="monospace" font-size="7" opacity="0.6">~100 tokens</text>
+
+  <!-- 2. test-status -->
+  <rect x="125" y="140" width="100" height="150" rx="6" fill="#042F2E" stroke="#0D9488" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="125" y="140" width="100" height="28" rx="6" fill="url(#lp_teal)" opacity="0.3"/>
+  <text x="175" y="158" text-anchor="middle" fill="#2DD4BF" font-family="monospace" font-size="9" font-weight="bold">test-status</text>
+  <text x="175" y="182" text-anchor="middle" fill="#5EEAD4" font-family="monospace" font-size="8">framework</text>
+  <text x="175" y="196" text-anchor="middle" fill="#5EEAD4" font-family="monospace" font-size="8">pass/fail</text>
+  <text x="175" y="210" text-anchor="middle" fill="#5EEAD4" font-family="monospace" font-size="8">coverage</text>
+  <text x="175" y="224" text-anchor="middle" fill="#5EEAD4" font-family="monospace" font-size="8">last run</text>
+  <text x="175" y="270" text-anchor="middle" fill="#0D9488" font-family="monospace" font-size="7" opacity="0.6">~80 tokens</text>
+
+  <!-- 3. env-summary -->
+  <rect x="230" y="140" width="100" height="150" rx="6" fill="#083344" stroke="#0891B2" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="230" y="140" width="100" height="28" rx="6" fill="url(#lp_cyan)" opacity="0.3"/>
+  <text x="280" y="158" text-anchor="middle" fill="#22D3EE" font-family="monospace" font-size="9" font-weight="bold">env-summary</text>
+  <text x="280" y="182" text-anchor="middle" fill="#67E8F9" font-family="monospace" font-size="8">OS/shell</text>
+  <text x="280" y="196" text-anchor="middle" fill="#67E8F9" font-family="monospace" font-size="8">runtimes</text>
+  <text x="280" y="210" text-anchor="middle" fill="#67E8F9" font-family="monospace" font-size="8">pkg mgrs</text>
+  <text x="280" y="224" text-anchor="middle" fill="#67E8F9" font-family="monospace" font-size="8">resources</text>
+  <text x="280" y="270" text-anchor="middle" fill="#0891B2" font-family="monospace" font-size="7" opacity="0.6">~150 tokens</text>
+
+  <!-- 4. docker-status -->
+  <rect x="350" y="140" width="100" height="150" rx="6" fill="#082F49" stroke="#0284C7" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="350" y="140" width="100" height="28" rx="6" fill="url(#lp_sky)" opacity="0.3"/>
+  <text x="400" y="158" text-anchor="middle" fill="#38BDF8" font-family="monospace" font-size="9" font-weight="bold">docker-status</text>
+  <text x="400" y="182" text-anchor="middle" fill="#7DD3FC" font-family="monospace" font-size="8">containers</text>
+  <text x="400" y="196" text-anchor="middle" fill="#7DD3FC" font-family="monospace" font-size="8">compose</text>
+  <text x="400" y="210" text-anchor="middle" fill="#7DD3FC" font-family="monospace" font-size="8">images</text>
+  <text x="400" y="224" text-anchor="middle" fill="#7DD3FC" font-family="monospace" font-size="8">logs</text>
+  <text x="400" y="270" text-anchor="middle" fill="#0284C7" font-family="monospace" font-size="7" opacity="0.6">~120 tokens</text>
+
+  <!-- 5. deps-audit -->
+  <rect x="470" y="140" width="100" height="150" rx="6" fill="#2E1065" stroke="#7C3AED" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="470" y="140" width="100" height="28" rx="6" fill="url(#lp_violet)" opacity="0.3"/>
+  <text x="520" y="158" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="9" font-weight="bold">deps-audit</text>
+  <text x="520" y="182" text-anchor="middle" fill="#C4B5FD" font-family="monospace" font-size="8">lock files</text>
+  <text x="520" y="196" text-anchor="middle" fill="#C4B5FD" font-family="monospace" font-size="8">dep count</text>
+  <text x="520" y="210" text-anchor="middle" fill="#C4B5FD" font-family="monospace" font-size="8">outdated</text>
+  <text x="520" y="224" text-anchor="middle" fill="#C4B5FD" font-family="monospace" font-size="8">vulns</text>
+  <text x="520" y="270" text-anchor="middle" fill="#7C3AED" font-family="monospace" font-size="7" opacity="0.6">~90 tokens</text>
+
+  <!-- 6. project-summary -->
+  <rect x="575" y="140" width="100" height="150" rx="6" fill="#1C1917" stroke="#D97706" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="575" y="140" width="100" height="28" rx="6" fill="url(#lp_amber)" opacity="0.3"/>
+  <text x="625" y="158" text-anchor="middle" fill="#FCD34D" font-family="monospace" font-size="8" font-weight="bold">project-summary</text>
+  <text x="625" y="182" text-anchor="middle" fill="#FDE68A" font-family="monospace" font-size="8">structure</text>
+  <text x="625" y="196" text-anchor="middle" fill="#FDE68A" font-family="monospace" font-size="8">tech stack</text>
+  <text x="625" y="210" text-anchor="middle" fill="#FDE68A" font-family="monospace" font-size="8">entry pts</text>
+  <text x="625" y="224" text-anchor="middle" fill="#FDE68A" font-family="monospace" font-size="8">configs</text>
+  <text x="625" y="270" text-anchor="middle" fill="#D97706" font-family="monospace" font-size="7" opacity="0.6">~130 tokens</text>
+
+  <!-- 7. api-health -->
+  <rect x="680" y="140" width="100" height="150" rx="6" fill="#4C0519" stroke="#E11D48" stroke-width="1.5" filter="url(#lp_shadow)"/>
+  <rect x="680" y="140" width="100" height="28" rx="6" fill="url(#lp_rose)" opacity="0.3"/>
+  <text x="730" y="158" text-anchor="middle" fill="#FB7185" font-family="monospace" font-size="9" font-weight="bold">api-health</text>
+  <text x="730" y="182" text-anchor="middle" fill="#FDA4AF" font-family="monospace" font-size="8">port scan</text>
+  <text x="730" y="196" text-anchor="middle" fill="#FDA4AF" font-family="monospace" font-size="8">endpoints</text>
+  <text x="730" y="210" text-anchor="middle" fill="#FDA4AF" font-family="monospace" font-size="8">.env URLs</text>
+  <text x="730" y="224" text-anchor="middle" fill="#FDA4AF" font-family="monospace" font-size="8">latency</text>
+  <text x="730" y="270" text-anchor="middle" fill="#E11D48" font-family="monospace" font-size="7" opacity="0.6">~70 tokens</text>
+
+  <!-- Fan-in lines from loaders to merge -->
+  <line x1="70" y1="290" x2="400" y2="340" stroke="#34D399" stroke-width="1" opacity="0.3"/>
+  <line x1="175" y1="290" x2="400" y2="340" stroke="#2DD4BF" stroke-width="1" opacity="0.3"/>
+  <line x1="280" y1="290" x2="400" y2="340" stroke="#22D3EE" stroke-width="1" opacity="0.3"/>
+  <line x1="400" y1="290" x2="400" y2="340" stroke="#38BDF8" stroke-width="1" opacity="0.3"/>
+  <line x1="520" y1="290" x2="400" y2="340" stroke="#A78BFA" stroke-width="1" opacity="0.3"/>
+  <line x1="625" y1="290" x2="400" y2="340" stroke="#FCD34D" stroke-width="1" opacity="0.3"/>
+  <line x1="730" y1="290" x2="400" y2="340" stroke="#FB7185" stroke-width="1" opacity="0.3"/>
+
+  <!-- Merge point -->
+  <rect x="310" y="340" width="180" height="40" rx="8" fill="#052E16" stroke="#10B981" stroke-width="2" filter="url(#lp_shadow)"/>
+  <text x="400" y="364" text-anchor="middle" fill="#34D399" font-family="monospace" font-size="12" font-weight="bold">STRUCTURED OUTPUT</text>
+
+  <!-- Arrow to final output -->
+  <line x1="400" y1="380" x2="400" y2="410" stroke="#34D399" stroke-width="1.5" marker-end="url(#lp_arrow)"/>
+
+  <!-- Final output -->
+  <rect x="200" y="415" width="400" height="60" rx="8" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+  <text x="400" y="438" text-anchor="middle" fill="#E2E8F0" font-family="monospace" font-size="10">╔══ UMWELT PROFILE: DEV ══╗</text>
+  <text x="400" y="454" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="9">git: main ✓ | tests: 42/42 ✓ | node: 20.x | 3 services UP</text>
+  <text x="400" y="468" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="9">╚══ ~740 tokens | $0.002 ══╝</text>
+
+  <!-- Parallel execution indicator -->
+  <text x="400" y="320" text-anchor="middle" fill="#475569" font-family="monospace" font-size="9">▸▸▸ all 7 loaders execute in parallel ▸▸▸</text>
+</svg>

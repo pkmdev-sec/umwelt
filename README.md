@@ -1,3 +1,5 @@
+![Umwelt Banner](assets/banner.svg)
+
 <p align="center">
   <img src="assets/logo.svg" alt="UMWELT" width="200" height="200" />
 </p>

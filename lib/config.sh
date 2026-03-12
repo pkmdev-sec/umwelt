@@ -102,12 +102,19 @@ load_config() {
 # ─── Cache System ───────────────────────────────────────────────
 cache_init() {
   if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 0; fi
-  mkdir -p "$UMWELT_CACHE_DIR"
+  mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || {
+    echo "Error: Failed to create cache directory: $UMWELT_CACHE_DIR" >&2
+    return 1
+  }
 }
 
 # Generate a cache key from loader name + arguments + project context
 cache_key() {
-  local loader="$1"
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    echo "error_no_loader"
+    return 1
+  fi
   shift
   local args="$*"
   local project_hash
@@ -119,14 +126,18 @@ cache_key() {
 cache_get() {
   if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 1; fi
 
-  local key="$1"
+  local key="${1:-}"
+  if [ -z "$key" ]; then
+    return 1
+  fi
+
   local cache_file="$UMWELT_CACHE_DIR/$key"
 
   if [ ! -f "$cache_file" ]; then return 1; fi
 
   # Check TTL
   local now file_age
-  now=$(date +%s)
+  now=$(date +%s 2>/dev/null || echo 0)
   if stat -f '%m' /dev/null &>/dev/null 2>&1; then
     # macOS
     file_age=$(stat -f '%m' "$cache_file" 2>/dev/null || echo 0)
@@ -135,13 +146,26 @@ cache_get() {
     file_age=$(stat -c '%Y' "$cache_file" 2>/dev/null || echo 0)
   fi
 
+  # Validate numeric values
+  if ! [[ "$now" =~ ^[0-9]+$ ]]; then
+    now=0
+  fi
+  if ! [[ "$file_age" =~ ^[0-9]+$ ]]; then
+    file_age=0
+  fi
+
+  local ttl="${UMWELT_CACHE_TTL:-300}"
+  if ! [[ "$ttl" =~ ^[0-9]+$ ]]; then
+    ttl=300
+  fi
+
   local age=$((now - file_age))
-  if [ "$age" -gt "$UMWELT_CACHE_TTL" ]; then
-    rm -f "$cache_file"
+  if [ "$age" -gt "$ttl" ]; then
+    rm -f "$cache_file" 2>/dev/null || true
     return 1
   fi
 
-  cat "$cache_file"
+  cat "$cache_file" 2>/dev/null || return 1
   return 0
 }
 
@@ -149,17 +173,34 @@ cache_get() {
 cache_set() {
   if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 0; fi
 
-  local key="$1"
-  local value="$2"
-  local cache_file="$UMWELT_CACHE_DIR/$key"
+  local key="${1:-}"
+  local value="${2:-}"
 
-  echo "$value" > "$cache_file"
+  if [ -z "$key" ]; then
+    return 1
+  fi
+
+  # Ensure cache directory exists
+  if [ ! -d "$UMWELT_CACHE_DIR" ]; then
+    mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || return 1
+  fi
+
+  local cache_file="$UMWELT_CACHE_DIR/$key"
+  echo "$value" > "$cache_file" 2>/dev/null || {
+    echo "Error: Failed to write cache file: $cache_file" >&2
+    return 1
+  }
 }
 
 # Invalidate cache for a loader
 cache_invalidate() {
-  local loader="$1"
-  rm -f "$UMWELT_CACHE_DIR/${loader}_"* 2>/dev/null || true
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    return 1
+  fi
+  if [ -d "$UMWELT_CACHE_DIR" ]; then
+    rm -f "$UMWELT_CACHE_DIR/${loader}_"* 2>/dev/null || true
+  fi
 }
 
 # Clear all cache

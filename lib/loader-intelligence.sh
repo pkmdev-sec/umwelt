@@ -15,7 +15,12 @@ fi
 # is_loader_relevant <loader_name>
 # Returns 0 (true) if the loader would produce useful output, 1 (false) otherwise
 is_loader_relevant() {
-  local loader_name="$1"
+  local loader_name="${1:-}"
+
+  # Input validation
+  if [ -z "$loader_name" ]; then
+    return 1
+  fi
 
   case "$loader_name" in
     docker-status)
@@ -102,7 +107,13 @@ is_loader_relevant() {
 # estimate_loader_tokens <loader_name>
 # Returns approximate token count for the loader's output
 estimate_loader_tokens() {
-  local loader_name="$1"
+  local loader_name="${1:-}"
+
+  # Input validation
+  if [ -z "$loader_name" ]; then
+    echo "100"
+    return
+  fi
 
   case "$loader_name" in
     env-summary)
@@ -112,8 +123,11 @@ estimate_loader_tokens() {
       # Depends on dirty state
       if git rev-parse --is-inside-work-tree &>/dev/null; then
         local staged unstaged
-        staged=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')
-        unstaged=$(git diff --name-only 2>/dev/null | wc -l | tr -d ' ')
+        staged=$(git diff --cached --name-only 2>/dev/null | wc -l 2>/dev/null | tr -d ' ' || echo "0")
+        unstaged=$(git diff --name-only 2>/dev/null | wc -l 2>/dev/null | tr -d ' ' || echo "0")
+        # Validate numeric values
+        if ! [[ "$staged" =~ ^[0-9]+$ ]]; then staged=0; fi
+        if ! [[ "$unstaged" =~ ^[0-9]+$ ]]; then unstaged=0; fi
         local base=100
         local file_tokens=$(( (staged + unstaged) * 20 ))
         echo $((base + file_tokens))
@@ -127,7 +141,9 @@ estimate_loader_tokens() {
     docker-status)
       if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
         local count
-        count=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')
+        count=$(docker ps -q 2>/dev/null | wc -l 2>/dev/null | tr -d ' ' || echo "0")
+        # Validate numeric value
+        if ! [[ "$count" =~ ^[0-9]+$ ]]; then count=0; fi
         echo $(( 50 + count * 30 ))
       else
         echo "20"
@@ -152,8 +168,13 @@ estimate_loader_tokens() {
 # format_loader_output <loader_name> <raw_output>
 # Cleans and structures loader output for Claude-friendly consumption
 format_loader_output() {
-  local loader_name="$1"
-  local raw_output="$2"
+  local loader_name="${1:-}"
+  local raw_output="${2:-}"
+
+  # Input validation
+  if [ -z "$loader_name" ]; then
+    return
+  fi
 
   # Skip empty output
   if [ -z "$raw_output" ] || [ "$(echo "$raw_output" | tr -d '[:space:]')" = "" ]; then
@@ -290,9 +311,16 @@ run_relevant_loaders() {
 estimate_total_loader_tokens() {
   local total=0
   for loader in "$@"; do
+    if [ -z "$loader" ]; then
+      continue
+    fi
     if is_loader_relevant "$loader"; then
       local tokens
       tokens=$(estimate_loader_tokens "$loader")
+      # Validate numeric value
+      if ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
+        tokens=100
+      fi
       total=$((total + tokens))
     fi
   done

@@ -48,9 +48,15 @@ get_section_priority() {
 
 # ─── Sigil Template Detection ───────────────────────────────
 get_active_sigil_template() {
+  # Gracefully handle missing Sigil installation
+  if [ -z "$PROMPT_STUDIO_DIR" ] || [ ! -d "$PROMPT_STUDIO_DIR" ]; then
+    echo ""
+    return
+  fi
+
   local active_file="$PROMPT_STUDIO_DIR/.active-template"
   if [ -f "$active_file" ]; then
-    cat "$active_file"
+    cat "$active_file" 2>/dev/null || echo ""
   else
     echo ""
   fi
@@ -58,7 +64,18 @@ get_active_sigil_template() {
 
 # Load Sigil template content (markdown body, skip YAML frontmatter)
 load_sigil_template() {
-  local template_name="$1"
+  local template_name="${1:-}"
+
+  # Input validation
+  if [ -z "$template_name" ]; then
+    return
+  fi
+
+  # Gracefully handle missing templates directory
+  if [ -z "$TEMPLATES_DIR" ] || [ ! -d "$TEMPLATES_DIR" ]; then
+    return
+  fi
+
   local template_file="$TEMPLATES_DIR/${template_name}.md"
 
   if [ ! -f "$template_file" ]; then
@@ -83,26 +100,39 @@ load_sigil_template() {
     if [ "$in_frontmatter" = "false" ] && [ "$frontmatter_count" -ge 2 ]; then
       echo "$line"
     fi
-  done < "$template_file"
+  done < "$template_file" 2>/dev/null || true
 }
 
 # ─── Stable vs Volatile Context ─────────────────────────────
 get_stable_context() {
+  # Ensure cache directory exists
+  if [ ! -d "$UMWELT_CACHE_DIR" ]; then
+    mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || {
+      echo "Error: Failed to create cache directory" >&2
+      # Return minimal context if cache fails
+      echo "os: $(uname -s 2>/dev/null || echo 'unknown')"
+      return
+    }
+  fi
+
   local cache_file="$UMWELT_CACHE_DIR/stable-context"
   local cache_ttl=600
 
   if [ -f "$cache_file" ]; then
     local now file_age age
-    now=$(date +%s)
+    now=$(date +%s 2>/dev/null || echo 0)
     if stat -f '%m' /dev/null &>/dev/null 2>&1; then
       file_age=$(stat -f '%m' "$cache_file" 2>/dev/null || echo 0)
     else
       file_age=$(stat -c '%Y' "$cache_file" 2>/dev/null || echo 0)
     fi
-    age=$((now - file_age))
-    if [ "$age" -lt "$cache_ttl" ]; then
-      cat "$cache_file"
-      return
+    # Validate numeric values
+    if [[ "$now" =~ ^[0-9]+$ ]] && [[ "$file_age" =~ ^[0-9]+$ ]]; then
+      age=$((now - file_age))
+      if [ "$age" -lt "$cache_ttl" ]; then
+        cat "$cache_file" 2>/dev/null || true
+        return
+      fi
     fi
   fi
 
@@ -123,8 +153,8 @@ cwd: $(pwd)
 "
   fi
 
-  mkdir -p "$UMWELT_CACHE_DIR"
-  printf '%s' "$stable" > "$cache_file"
+  mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || true
+  printf '%s' "$stable" > "$cache_file" 2>/dev/null || true
   printf '%s' "$stable"
 }
 
@@ -168,14 +198,23 @@ get_priority_order() {
 
 # ─── Token Estimation ───────────────────────────────────────
 estimate_text_tokens() {
-  local text="$1"
+  local text="${1:-}"
   if [ -z "$text" ]; then
     echo "0"
     return
   fi
   local chars=${#text}
   local words
-  words=$(echo "$text" | wc -w | tr -d ' ')
+  words=$(echo "$text" | wc -w 2>/dev/null | tr -d ' ' || echo "0")
+
+  # Validate numeric values before arithmetic
+  if ! [[ "$chars" =~ ^[0-9]+$ ]]; then
+    chars=0
+  fi
+  if ! [[ "$words" =~ ^[0-9]+$ ]]; then
+    words=0
+  fi
+
   local char_est=$((chars / 4))
   local word_est=$(( (words * 13) / 10 ))
   local avg=$(( (char_est + word_est) / 2 ))
@@ -210,15 +249,32 @@ assemble_unified_context() {
 
   # Helper: add a section
   _add_section() {
-    local name="$1"
-    local priority="$2"
-    local content="$3"
+    local name="${1:-}"
+    local priority="${2:-50}"
+    local content="${3:-}"
+
+    # Validate inputs
+    if [ -z "$name" ]; then
+      return
+    fi
+
+    # Validate priority is numeric
+    if ! [[ "$priority" =~ ^[0-9]+$ ]]; then
+      priority=50
+    fi
+
     local tokens
     tokens=$(estimate_text_tokens "$content")
-    echo "$name" > "$tmpdir/sec_${section_count}_name"
-    echo "$priority" > "$tmpdir/sec_${section_count}_pri"
-    printf '%s' "$content" > "$tmpdir/sec_${section_count}_content"
-    echo "$tokens" > "$tmpdir/sec_${section_count}_tokens"
+
+    # Validate tokens is numeric
+    if ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
+      tokens=0
+    fi
+
+    echo "$name" > "$tmpdir/sec_${section_count}_name" 2>/dev/null || return
+    echo "$priority" > "$tmpdir/sec_${section_count}_pri" 2>/dev/null || return
+    printf '%s' "$content" > "$tmpdir/sec_${section_count}_content" 2>/dev/null || return
+    echo "$tokens" > "$tmpdir/sec_${section_count}_tokens" 2>/dev/null || return
     total_tokens=$((total_tokens + tokens))
     section_count=$((section_count + 1))
   }
@@ -274,6 +330,17 @@ ${volatile_ctx}=== END GIT CONTEXT ==="
 
       local est_tokens
       est_tokens=$(estimate_loader_tokens "$loader" 2>/dev/null || echo "100")
+
+      # Validate est_tokens is numeric
+      if ! [[ "$est_tokens" =~ ^[0-9]+$ ]]; then
+        est_tokens=100
+      fi
+
+      # Validate total_tokens is numeric
+      if ! [[ "$total_tokens" =~ ^[0-9]+$ ]]; then
+        total_tokens=0
+      fi
+
       if [ $((total_tokens + est_tokens)) -gt "$MAX_INJECTION_TOKENS" ]; then
         continue
       fi

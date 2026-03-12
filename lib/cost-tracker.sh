@@ -20,14 +20,23 @@ THRESHOLD_MINIMAL=0.50
 # ─── Token Estimation ─────────────────────────────────────────
 # Approximate: ~4 chars per token (cl100k_base), hybrid with word-based
 estimate_tokens() {
-  local text="$1"
+  local text="${1:-}"
   if [ -z "$text" ]; then
     echo "0"
     return
   fi
   local chars=${#text}
   local words
-  words=$(echo "$text" | wc -w | tr -d ' ')
+  words=$(echo "$text" | wc -w 2>/dev/null | tr -d ' ' || echo "0")
+
+  # Validate numeric values
+  if ! [[ "$chars" =~ ^[0-9]+$ ]]; then
+    chars=0
+  fi
+  if ! [[ "$words" =~ ^[0-9]+$ ]]; then
+    words=0
+  fi
+
   local char_est=$((chars / 4))
   local word_est=$(( (words * 13) / 10 ))
   local avg=$(( (char_est + word_est) / 2 ))
@@ -39,53 +48,84 @@ estimate_tokens() {
 # estimate_injection_cost <text>
 # Returns dollar amount as a decimal string
 estimate_injection_cost() {
-  local text="$1"
+  local text="${1:-}"
   local tokens
   tokens=$(estimate_tokens "$text")
 
+  # Validate tokens is numeric
+  if ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
+    tokens=0
+  fi
+
+  # Validate price is numeric
+  local price="${PRICE_PER_M_INPUT:-3}"
+  if ! [[ "$price" =~ ^[0-9]+$ ]]; then
+    price=3
+  fi
+
   # Cost = tokens * (price_per_million / 1_000_000)
   # Use awk for floating point
-  awk -v tokens="$tokens" -v price="$PRICE_PER_M_INPUT" \
-    'BEGIN { printf "%.6f", (tokens / 1000000) * price }'
+  awk -v tokens="$tokens" -v price="$price" \
+    'BEGIN { printf "%.6f", (tokens / 1000000) * price }' 2>/dev/null || echo "0.000000"
 }
 
 # ─── Session Cost Management ─────────────────────────────────
 _init_session_cost() {
-  mkdir -p "$UMWELT_CACHE_DIR"
+  mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || {
+    echo "Error: Failed to create cache directory: $UMWELT_CACHE_DIR" >&2
+    return 1
+  }
   if [ ! -f "$SESSION_COST_FILE" ]; then
-    echo "0.000000" > "$SESSION_COST_FILE"
+    echo "0.000000" > "$SESSION_COST_FILE" 2>/dev/null || {
+      echo "Error: Failed to initialize session cost file" >&2
+      return 1
+    }
   fi
 }
 
 # get_session_cost — returns cumulative cost
 get_session_cost() {
-  _init_session_cost
-  cat "$SESSION_COST_FILE"
+  _init_session_cost || echo "0.000000"
+  if [ -f "$SESSION_COST_FILE" ]; then
+    cat "$SESSION_COST_FILE" 2>/dev/null || echo "0.000000"
+  else
+    echo "0.000000"
+  fi
 }
 
 # Add cost to running total
 add_session_cost() {
-  local amount="$1"
-  _init_session_cost
+  local amount="${1:-0.000000}"
+  _init_session_cost || return 1
   local current
-  current=$(cat "$SESSION_COST_FILE")
+  current=$(cat "$SESSION_COST_FILE" 2>/dev/null || echo "0.000000")
   local new_total
-  new_total=$(awk -v c="$current" -v a="$amount" 'BEGIN { printf "%.6f", c + a }')
-  echo "$new_total" > "$SESSION_COST_FILE"
+  new_total=$(awk -v c="$current" -v a="$amount" 'BEGIN { printf "%.6f", c + a }' 2>/dev/null || echo "$current")
+  echo "$new_total" > "$SESSION_COST_FILE" 2>/dev/null || {
+    echo "Error: Failed to update session cost file" >&2
+    echo "$current"
+    return 1
+  }
 
   # Log the injection
   local timestamp
-  timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  echo "$timestamp | +$amount | total=$new_total" >> "$SESSION_LOG_FILE"
+  timestamp=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "unknown")
+  echo "$timestamp | +$amount | total=$new_total" >> "$SESSION_LOG_FILE" 2>/dev/null || true
 
   echo "$new_total"
 }
 
 # Reset session cost (e.g., on new session)
 reset_session_cost() {
-  mkdir -p "$UMWELT_CACHE_DIR"
-  echo "0.000000" > "$SESSION_COST_FILE"
-  : > "$SESSION_LOG_FILE"
+  mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || {
+    echo "Error: Failed to create cache directory" >&2
+    return 1
+  }
+  echo "0.000000" > "$SESSION_COST_FILE" 2>/dev/null || {
+    echo "Error: Failed to reset session cost file" >&2
+    return 1
+  }
+  : > "$SESSION_LOG_FILE" 2>/dev/null || true
 }
 
 # ─── Cost Profile ────────────────────────────────────────────
@@ -143,7 +183,13 @@ get_allowed_loaders() {
 
 # Check if a specific loader is allowed under current budget
 is_loader_allowed() {
-  local loader_name="$1"
+  local loader_name="${1:-}"
+
+  # Input validation
+  if [ -z "$loader_name" ]; then
+    return 1
+  fi
+
   local allowed
   allowed=$(get_allowed_loaders)
 

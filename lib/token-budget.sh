@@ -13,8 +13,21 @@ UMWELT_TOKEN_COUNT_FILE="$UMWELT_DIFF_CACHE_DIR/token-count"
 # Estimate token count from text (chars / 4 approximation)
 # Usage: tokens=$(estimate_tokens "$text")
 estimate_tokens() {
-    local text="$1"
+    local text="${1:-}"
+
+    # Handle empty input
+    if [ -z "$text" ]; then
+        echo "0"
+        return
+    fi
+
     local char_count=${#text}
+    # Validate char_count is numeric
+    if ! [[ "$char_count" =~ ^[0-9]+$ ]]; then
+        echo "0"
+        return
+    fi
+
     echo $(( char_count / 4 ))
 }
 
@@ -22,7 +35,14 @@ estimate_tokens() {
 # Usage: total=$(get_session_tokens)
 get_session_tokens() {
     if [ -f "$UMWELT_TOKEN_COUNT_FILE" ]; then
-        cat "$UMWELT_TOKEN_COUNT_FILE"
+        local count
+        count=$(cat "$UMWELT_TOKEN_COUNT_FILE" 2>/dev/null || echo "0")
+        # Validate it's numeric, default to 0 if not
+        if [[ "$count" =~ ^[0-9]+$ ]]; then
+            echo "$count"
+        else
+            echo "0"
+        fi
     else
         echo "0"
     fi
@@ -31,13 +51,37 @@ get_session_tokens() {
 # Add tokens to session counter
 # Usage: track_tokens "$output_text"
 track_tokens() {
-    local text="$1"
+    local text="${1:-}"
     local new_tokens
     new_tokens=$(estimate_tokens "$text")
+
+    # Validate new_tokens is numeric
+    if ! [[ "$new_tokens" =~ ^[0-9]+$ ]]; then
+        new_tokens=0
+    fi
+
     local current
     current=$(get_session_tokens)
+
+    # Validate current is numeric
+    if ! [[ "$current" =~ ^[0-9]+$ ]]; then
+        current=0
+    fi
+
     local total=$((current + new_tokens))
-    echo "$total" > "$UMWELT_TOKEN_COUNT_FILE"
+
+    # Ensure cache directory exists
+    if [ ! -d "$UMWELT_DIFF_CACHE_DIR" ]; then
+        mkdir -p "$UMWELT_DIFF_CACHE_DIR" 2>/dev/null || {
+            echo "Error: Failed to create cache directory" >&2
+            echo "$total"
+            return 1
+        }
+    fi
+
+    echo "$total" > "$UMWELT_TOKEN_COUNT_FILE" 2>/dev/null || {
+        echo "Error: Failed to write token count file" >&2
+    }
     echo "$total"
 }
 
@@ -46,7 +90,18 @@ track_tokens() {
 check_token_budget() {
     local used
     used=$(get_session_tokens)
-    local remaining=$((UMWELT_TOKEN_BUDGET - used))
+
+    # Validate inputs are numeric
+    if ! [[ "$used" =~ ^[0-9]+$ ]]; then
+        used=0
+    fi
+
+    local budget="${UMWELT_TOKEN_BUDGET:-10000}"
+    if ! [[ "$budget" =~ ^[0-9]+$ ]]; then
+        budget=10000
+    fi
+
+    local remaining=$((budget - used))
     if [ "$remaining" -lt 0 ]; then
         remaining=0
     fi
@@ -58,11 +113,22 @@ check_token_budget() {
 get_budget_percentage() {
     local used
     used=$(get_session_tokens)
-    if [ "$UMWELT_TOKEN_BUDGET" -eq 0 ]; then
+
+    # Validate used is numeric
+    if ! [[ "$used" =~ ^[0-9]+$ ]]; then
+        used=0
+    fi
+
+    local budget="${UMWELT_TOKEN_BUDGET:-10000}"
+    if ! [[ "$budget" =~ ^[0-9]+$ ]]; then
+        budget=10000
+    fi
+
+    if [ "$budget" -eq 0 ]; then
         echo "100"
         return
     fi
-    echo $(( (used * 100) / UMWELT_TOKEN_BUDGET ))
+    echo $(( (used * 100) / budget ))
 }
 
 # Determine if profile should be downgraded based on budget usage
@@ -72,6 +138,11 @@ should_downgrade() {
     local current_profile="${1:-dev}"
     local pct
     pct=$(get_budget_percentage)
+
+    # Validate pct is numeric
+    if ! [[ "$pct" =~ ^[0-9]+$ ]]; then
+        pct=0
+    fi
 
     if [ "$pct" -ge 90 ]; then
         # At 90%+ budget: go silent

@@ -37,7 +37,14 @@ _KEYWORDS_PROJECT="build:35 compile:35 bundle:30 webpack:30 vite:30 esbuild:25 s
 # Args: message
 # Output: space-separated lowercase keywords
 extract_keywords() {
-  local message="$1"
+  local message="${1:-}"
+
+  # Input validation
+  if [ -z "$message" ]; then
+    echo ""
+    return
+  fi
+
   # Lowercase, strip punctuation (keep hyphens), split into words, deduplicate
   echo "$message" \
     | tr '[:upper:]' '[:lower:]' \
@@ -53,9 +60,20 @@ extract_keywords() {
 # Args: loader_name "keyword1 keyword2 ..."
 # Output: integer score (0-100)
 score_loader_relevance() {
-  local loader="$1"
-  local keywords="$2"
+  local loader="${1:-}"
+  local keywords="${2:-}"
   local score=0
+
+  # Input validation
+  if [ -z "$loader" ]; then
+    echo "0"
+    return
+  fi
+
+  if [ -z "$keywords" ]; then
+    echo "0"
+    return
+  fi
 
   # Select the right keyword set
   local keyword_defs=""
@@ -70,12 +88,19 @@ score_loader_relevance() {
     *)              echo "0"; return ;;
   esac
 
-  # Score each message keyword against the loader's keyword set
+  # Score each message keyword against the loader's keyword set (case-insensitive)
   for msg_word in $keywords; do
+    # Convert to lowercase for matching (keywords already lowercase from extract_keywords)
+    local msg_word_lower
+    msg_word_lower=$(echo "$msg_word" | tr '[:upper:]' '[:lower:]')
     for kw_entry in $keyword_defs; do
       local kw="${kw_entry%%:*}"
       local weight="${kw_entry#*:}"
-      if [ "$msg_word" = "$kw" ]; then
+      # Ensure weight is numeric
+      if ! [[ "$weight" =~ ^[0-9]+$ ]]; then
+        continue
+      fi
+      if [ "$msg_word_lower" = "$kw" ]; then
         score=$((score + weight))
       fi
     done
@@ -94,10 +119,21 @@ score_loader_relevance() {
 # Args: "loader1 loader2 ..." "keyword1 keyword2 ..." [min_score]
 # Output: space-separated list of loaders above threshold
 filter_loaders() {
-  local loaders="$1"
-  local keywords="$2"
+  local loaders="${1:-}"
+  local keywords="${2:-}"
   local min_score="${3:-$UMWELT_PREDICTOR_MIN_SCORE}"
   local result=""
+
+  # Input validation
+  if [ -z "$loaders" ]; then
+    echo ""
+    return
+  fi
+
+  # Validate min_score is numeric
+  if ! [[ "$min_score" =~ ^[0-9]+$ ]]; then
+    min_score="$UMWELT_PREDICTOR_MIN_SCORE"
+  fi
 
   for loader in $loaders; do
     local score
@@ -116,8 +152,19 @@ filter_loaders() {
 # Args: "user message text"
 # Output: space-separated loader names, ordered by relevance score descending
 predict_needed_loaders() {
-  local message="$1"
+  local message="${1:-}"
   local min_score="${2:-$UMWELT_PREDICTOR_MIN_SCORE}"
+
+  # Input validation
+  if [ -z "$message" ]; then
+    echo ""
+    return
+  fi
+
+  # Validate min_score is numeric
+  if ! [[ "$min_score" =~ ^[0-9]+$ ]]; then
+    min_score="$UMWELT_PREDICTOR_MIN_SCORE"
+  fi
 
   local keywords
   keywords=$(extract_keywords "$message")
@@ -134,7 +181,8 @@ predict_needed_loaders() {
   for loader in $all_loaders; do
     local score
     score=$(score_loader_relevance "$loader" "$keywords")
-    if [ "$score" -ge "$min_score" ]; then
+    # Ensure score is numeric before comparison
+    if [[ "$score" =~ ^[0-9]+$ ]] && [ "$score" -ge "$min_score" ]; then
       scored="$scored ${score}:${loader}"
     fi
   done

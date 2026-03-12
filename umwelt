@@ -1,33 +1,33 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  bang — Claude Code Context Automation Framework             ║
+# ║  umwelt — Claude Code Environment Intelligence Framework             ║
 # ║  Pre-prompt context injection for AI-assisted development    ║
 # ╠══════════════════════════════════════════════════════════════╣
 # ║  Usage:                                                      ║
-# ║    bang <loader> [flags]        Run a context loader          ║
-# ║    bang profile <name> [flags]  Run a context profile         ║
-# ║    bang list                    List available loaders         ║
-# ║    bang compose <l1> <l2> ...   Compose multiple loaders      ║
-# ║    bang hook-config             Generate hook JSON             ║
-# ║    bang install                 Install bang to PATH           ║
-# ║    bang --help                  Show this help                 ║
+# ║    umwelt <loader> [flags]        Run a context loader          ║
+# ║    umwelt profile <name> [flags]  Run a context profile         ║
+# ║    umwelt list                    List available loaders         ║
+# ║    umwelt compose <l1> <l2> ...   Compose multiple loaders      ║
+# ║    umwelt hook-config             Generate hook JSON             ║
+# ║    umwelt install                 Install umwelt to PATH           ║
+# ║    umwelt --help                  Show this help                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 set -euo pipefail
 
 VERSION="2.0.0"
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-LOADERS_DIR="$BANG_DIR/loaders"
-PROFILES_DIR="$BANG_DIR/profiles"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+LOADERS_DIR="$UMWELT_DIR/loaders"
+PROFILES_DIR="$UMWELT_DIR/profiles"
 
 # ─── Innovation Libraries ─────────────────────────────────────
-[ -f "$BANG_DIR/lib/diff-engine.sh" ] && source "$BANG_DIR/lib/diff-engine.sh"
-[ -f "$BANG_DIR/lib/token-budget.sh" ] && source "$BANG_DIR/lib/token-budget.sh"
-[ -f "$BANG_DIR/lib/cache-split.sh" ] && source "$BANG_DIR/lib/cache-split.sh"
+[ -f "$UMWELT_DIR/lib/diff-engine.sh" ] && source "$UMWELT_DIR/lib/diff-engine.sh"
+[ -f "$UMWELT_DIR/lib/token-budget.sh" ] && source "$UMWELT_DIR/lib/token-budget.sh"
+[ -f "$UMWELT_DIR/lib/cache-split.sh" ] && source "$UMWELT_DIR/lib/cache-split.sh"
 
 # Global flags
-BANG_DIFF_MODE="${BANG_DIFF_MODE:-0}"
-BANG_MODEL_FLAG=""
-BANG_BUDGET_FLAG=""
+UMWELT_DIFF_MODE="${UMWELT_DIFF_MODE:-0}"
+UMWELT_MODEL_FLAG=""
+UMWELT_BUDGET_FLAG=""
 
 # ─── jq Availability Check ──────────────────────────────────────
 if ! command -v jq &>/dev/null; then
@@ -52,10 +52,10 @@ NC='\033[0m'
 # ─── Help ────────────────────────────────────────────────────────
 show_help() {
   cat <<'EOF'
-bang — Claude Code Context Automation Framework v1.1.0
+umwelt — Claude Code Environment Intelligence Framework v1.1.0
 
 USAGE
-  bang <command> [options]
+  umwelt <command> [options]
 
 COMMANDS
   Loaders (individual context sources):
@@ -92,7 +92,7 @@ COMMANDS
     hook-vars [event]              Show available hook template variables
     env-config [category]          Generate .env config from RE findings
       Categories: performance, cost, security, debug, privacy, compaction
-    install                        Symlink bang to ~/.local/bin/
+    install                        Symlink umwelt to ~/.local/bin/
     test [loader|profile|all]      Run self-tests
     --help, -h                     Show this help
     --version, -v                  Show version
@@ -100,30 +100,30 @@ COMMANDS
 BANG SYNTAX IN CLAUDE CODE
   In Claude Code CLI, prefix commands with ! to inject output before LLM processing:
 
-    !`bang profile dev`            Load full dev context before your prompt
-    !`bang git-context --diff`     Inject git diff before asking about code
-    !`bang compose git-context test-status`  Combine multiple loaders
+    !`umwelt profile dev`            Load full dev context before your prompt
+    !`umwelt git-context --diff`     Inject git diff before asking about code
+    !`umwelt compose git-context test-status`  Combine multiple loaders
 
 ENVIRONMENT
-  BANG_DIR             Override framework directory (default: ~/.claude/bang-framework)
-  BANG_PROJECT_DIR     Override project directory (default: .)
-  BANG_API_ENDPOINTS   Comma-separated API URLs for api-health loader
+  UMWELT_DIR             Override framework directory (default: ~/.claude/umwelt)
+  UMWELT_PROJECT_DIR     Override project directory (default: .)
+  UMWELT_API_ENDPOINTS   Comma-separated API URLs for api-health loader
 
 EXAMPLES
   # In Claude Code, load context before a prompt:
-  !`bang profile dev` Fix the failing tests in the auth module
+  !`umwelt profile dev` Fix the failing tests in the auth module
 
   # Pre-deploy check:
-  !`bang profile deploy` Is this safe to ship?
+  !`umwelt profile deploy` Is this safe to ship?
 
   # Quick git + test status:
-  !`bang compose git-context test-status` What should I work on next?
+  !`umwelt compose git-context test-status` What should I work on next?
 
   # Code review with base branch:
-  !`bang profile review develop` Review my changes
+  !`umwelt profile review develop` Review my changes
 
   # Generate a hook that auto-injects on every prompt:
-  bang hook-config UserPromptSubmit dev >> ~/.claude/settings.json
+  umwelt hook-config UserPromptSubmit dev >> ~/.claude/settings.json
 EOF
 }
 
@@ -133,7 +133,7 @@ list_all() {
   for f in "$LOADERS_DIR"/*.sh; do
     if [ -f "$f" ]; then
       NAME=$(basename "$f" .sh)
-      DESC=$(head -3 "$f" | grep "^# bang-framework:" | sed 's/# bang-framework: //' || echo "")
+      DESC=$(head -3 "$f" | grep "^# umwelt:" | sed 's/# umwelt: //' || echo "")
       printf "  ${GREEN}%-20s${NC} %s\n" "$NAME" "$DESC"
     fi
   done
@@ -143,7 +143,7 @@ list_all() {
   for f in "$PROFILES_DIR"/*.sh; do
     if [ -f "$f" ]; then
       NAME=$(basename "$f" .sh)
-      DESC=$(head -3 "$f" | grep "^# bang-framework profile:" | sed 's/# bang-framework profile: //' || echo "")
+      DESC=$(head -3 "$f" | grep "^# umwelt profile:" | sed 's/# umwelt profile: //' || echo "")
       printf "  ${CYAN}%-20s${NC} %s\n" "$NAME" "$DESC"
     fi
   done
@@ -154,7 +154,7 @@ compose_loaders() {
   local loaders=("$@")
   if [ ${#loaders[@]} -eq 0 ]; then
     echo -e "${RED}Error: compose requires at least one loader name${NC}" >&2
-    echo "Usage: bang compose git-context test-status env-summary" >&2
+    echo "Usage: umwelt compose git-context test-status env-summary" >&2
     exit 1
   fi
 
@@ -206,9 +206,9 @@ generate_hook_config() {
 
   # Check if profile or loader
   if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
-    CMD="$BANG_DIR/profiles/${profile}.sh"
+    CMD="$UMWELT_DIR/profiles/${profile}.sh"
   elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
-    CMD="$BANG_DIR/loaders/${profile}.sh"
+    CMD="$UMWELT_DIR/loaders/${profile}.sh"
   else
     echo -e "${RED}Error: '${profile}' is not a valid profile or loader${NC}" >&2
     exit 1
@@ -223,7 +223,7 @@ generate_hook_config() {
     {
       "type": "command",
       "command": "${CMD}",
-      "statusMessage": "bang: loading ${profile} context",
+      "statusMessage": "umwelt: loading ${profile} context",
       "timeout": 30
     }
   ]
@@ -237,7 +237,7 @@ ENDJSON
     {
       "type": "prompt",
       "prompt": "Process the output of ${profile} context loader and summarize the key points. Available variables: {{sessionMemory}}, {{userMessages}}, {{docContents}}",
-      "statusMessage": "bang: AI-processing ${profile} context"
+      "statusMessage": "umwelt: AI-processing ${profile} context"
     }
   ]
 }
@@ -250,7 +250,7 @@ ENDJSON
     {
       "type": "agent",
       "prompt": "Analyze the ${profile} context and provide actionable recommendations. Variables: {{sessionMemory}}, {{userMessages}}, {{customInstructions}}",
-      "statusMessage": "bang: agent analyzing ${profile} context"
+      "statusMessage": "umwelt: agent analyzing ${profile} context"
     }
   ]
 }
@@ -260,7 +260,7 @@ ENDJSON
 
   echo "" >&2
   echo -e "${GREEN}Add this to your settings.json under hooks.${event}[]${NC}" >&2
-  echo -e "Or use: ${CYAN}bang install-hook ${event} ${profile}${NC}" >&2
+  echo -e "Or use: ${CYAN}umwelt install-hook ${event} ${profile}${NC}" >&2
 }
 
 # ─── Install Hook ────────────────────────────────────────────────
@@ -269,17 +269,17 @@ install_hook() {
   local profile="${2:-}"
 
   if [ -z "$event" ] || [ -z "$profile" ]; then
-    echo -e "${RED}Usage: bang install-hook <event> <profile|loader>${NC}" >&2
-    echo "Example: bang install-hook UserPromptSubmit dev" >&2
+    echo -e "${RED}Usage: umwelt install-hook <event> <profile|loader>${NC}" >&2
+    echo "Example: umwelt install-hook UserPromptSubmit dev" >&2
     exit 1
   fi
 
   # Determine command path
   local cmd=""
   if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
-    cmd="$BANG_DIR/profiles/${profile}.sh"
+    cmd="$UMWELT_DIR/profiles/${profile}.sh"
   elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
-    cmd="$BANG_DIR/loaders/${profile}.sh"
+    cmd="$UMWELT_DIR/loaders/${profile}.sh"
   else
     echo -e "${RED}Error: '${profile}' not found${NC}" >&2
     exit 1
@@ -315,7 +315,7 @@ install_hook() {
         "hooks": [{
           "type": "command",
           "command": $cmd,
-          "statusMessage": ("bang: loading " + $profile + " context"),
+          "statusMessage": ("umwelt: loading " + $profile + " context"),
           "timeout": 30
         }]
       }]
@@ -344,7 +344,7 @@ event_hooks.append({
     'hooks': [{
         'type': 'command',
         'command': new_cmd,
-        'statusMessage': 'bang: loading $profile context',
+        'statusMessage': 'umwelt: loading $profile context',
         'timeout': 30
     }]
 })
@@ -365,15 +365,15 @@ uninstall_hook() {
   local profile="${2:-}"
 
   if [ -z "$event" ] || [ -z "$profile" ]; then
-    echo -e "${RED}Usage: bang uninstall-hook <event> <profile|loader>${NC}" >&2
+    echo -e "${RED}Usage: umwelt uninstall-hook <event> <profile|loader>${NC}" >&2
     exit 1
   fi
 
   local cmd=""
   if [ -f "$PROFILES_DIR/${profile}.sh" ]; then
-    cmd="$BANG_DIR/profiles/${profile}.sh"
+    cmd="$UMWELT_DIR/profiles/${profile}.sh"
   elif [ -f "$LOADERS_DIR/${profile}.sh" ]; then
-    cmd="$BANG_DIR/loaders/${profile}.sh"
+    cmd="$UMWELT_DIR/loaders/${profile}.sh"
   else
     echo -e "${RED}Error: '${profile}' not found${NC}" >&2
     exit 1
@@ -509,7 +509,7 @@ generate_env_config() {
     echo ""
   fi
 
-  echo -e "${DIM}# Save: bang env-config > ~/.claude/.env${NC}"
+  echo -e "${DIM}# Save: umwelt env-config > ~/.claude/.env${NC}"
   echo -e "${DIM}# Load: source ~/.claude/.env${NC}"
 }
 
@@ -518,8 +518,8 @@ install_to_path() {
   local bin_dir="$HOME/.local/bin"
   mkdir -p "$bin_dir"
 
-  ln -sf "$BANG_DIR/bang" "$bin_dir/bang"
-  echo -e "${GREEN}Installed: ${bin_dir}/bang → ${BANG_DIR}/bang${NC}"
+  ln -sf "$UMWELT_DIR/bang" "$bin_dir/bang"
+  echo -e "${GREEN}Installed: ${bin_dir}/bang → ${UMWELT_DIR}/bang${NC}"
 
   # Check if in PATH
   if echo "$PATH" | grep -q "$bin_dir"; then
@@ -650,7 +650,7 @@ run_tests() {
     fi
   }
 
-  echo -e "${BOLD}Running bang self-tests...${NC}"
+  echo -e "${BOLD}Running umwelt self-tests...${NC}"
   echo ""
 
   if [ "$target" = "all" ] || [ "$target" = "loader" ] || [ "$target" = "loaders" ]; then
@@ -705,9 +705,9 @@ run_tests() {
 
   if [ "$target" = "all" ] || [ "$target" = "config" ]; then
     echo -e "${BOLD}Config system:${NC}"
-    test_one "config:source" "source '$BANG_DIR/lib/config.sh' && echo \"\$BANG_SCAN_DEPTH\""
-    assert_contains "config:defaults" "source '$BANG_DIR/lib/config.sh' && echo \$BANG_SCAN_DEPTH" "^[0-9]+$"
-    assert_contains "config:ports" "source '$BANG_DIR/lib/config.sh' && echo \$BANG_LOCAL_PORTS" "[0-9]"
+    test_one "config:source" "source '$UMWELT_DIR/lib/config.sh' && echo \"\$UMWELT_SCAN_DEPTH\""
+    assert_contains "config:defaults" "source '$UMWELT_DIR/lib/config.sh' && echo \$UMWELT_SCAN_DEPTH" "^[0-9]+$"
+    assert_contains "config:ports" "source '$UMWELT_DIR/lib/config.sh' && echo \$UMWELT_LOCAL_PORTS" "[0-9]"
     echo ""
   fi
 
@@ -722,20 +722,20 @@ run_tests() {
 
   if [ "$target" = "all" ] || [ "$target" = "cli" ]; then
     echo -e "${BOLD}CLI:${NC}"
-    test_one "list" "'$BANG_DIR/bang' list"
-    test_one "help" "'$BANG_DIR/bang' --help"
-    test_one "version" "'$BANG_DIR/bang' --version"
-    test_one "compose" "'$BANG_DIR/bang' compose git-context env-summary"
-    test_one "hook-config" "'$BANG_DIR/bang' hook-config UserPromptSubmit dev"
+    test_one "list" "'$UMWELT_DIR/bang' list"
+    test_one "help" "'$UMWELT_DIR/bang' --help"
+    test_one "version" "'$UMWELT_DIR/bang' --version"
+    test_one "compose" "'$UMWELT_DIR/bang' compose git-context env-summary"
+    test_one "hook-config" "'$UMWELT_DIR/bang' hook-config UserPromptSubmit dev"
     echo ""
 
     echo -e "${BOLD}CLI assertions:${NC}"
-    assert_contains "help:usage" "'$BANG_DIR/bang' --help" "USAGE"
-    assert_contains "help:loaders" "'$BANG_DIR/bang' --help" "git-context"
-    assert_contains "version:format" "'$BANG_DIR/bang' --version" "^bang v[0-9]"
-    assert_contains "list:loaders" "'$BANG_DIR/bang' list" "git-context"
-    assert_contains "list:profiles" "'$BANG_DIR/bang' list" "dev"
-    assert_contains "hook:json" "'$BANG_DIR/bang' hook-config UserPromptSubmit dev" "hooks"
+    assert_contains "help:usage" "'$UMWELT_DIR/bang' --help" "USAGE"
+    assert_contains "help:loaders" "'$UMWELT_DIR/bang' --help" "git-context"
+    assert_contains "version:format" "'$UMWELT_DIR/bang' --version" "^bang v[0-9]"
+    assert_contains "list:loaders" "'$UMWELT_DIR/bang' list" "git-context"
+    assert_contains "list:profiles" "'$UMWELT_DIR/bang' list" "dev"
+    assert_contains "hook:json" "'$UMWELT_DIR/bang' hook-config UserPromptSubmit dev" "hooks"
     echo ""
   fi
 
@@ -756,21 +756,21 @@ run_event() {
   local bash_cmd="${2:-}"
 
   # Source event router
-  if [ ! -f "$BANG_DIR/lib/event-router.sh" ]; then
+  if [ ! -f "$UMWELT_DIR/lib/event-router.sh" ]; then
     echo -e "${RED}Error: event-router.sh not found${NC}" >&2
     exit 1
   fi
-  source "$BANG_DIR/lib/event-router.sh"
+  source "$UMWELT_DIR/lib/event-router.sh"
 
   local loaders
   loaders=$(route_event "$event" "$bash_cmd")
 
   if [ -z "$loaders" ]; then
-    echo -e "${DIM}[bang:event-route] ${event}: no loaders needed${NC}" >&2
+    echo -e "${DIM}[umwelt:event-route] ${event}: no loaders needed${NC}" >&2
     return 0
   fi
 
-  echo -e "${DIM}[bang:event-route] ${event}: running ${loaders}${NC}" >&2
+  echo -e "${DIM}[umwelt:event-route] ${event}: running ${loaders}${NC}" >&2
 
   for loader in $loaders; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
@@ -791,26 +791,26 @@ predict_run() {
 
   if [ -z "$message" ]; then
     echo -e "${RED}Error: predict requires a message${NC}" >&2
-    echo "Usage: bang predict \"your message about what you're working on\"" >&2
+    echo "Usage: umwelt predict \"your message about what you're working on\"" >&2
     exit 1
   fi
 
   # Source predictor
-  if [ ! -f "$BANG_DIR/lib/predictor.sh" ]; then
+  if [ ! -f "$UMWELT_DIR/lib/predictor.sh" ]; then
     echo -e "${RED}Error: predictor.sh not found${NC}" >&2
     exit 1
   fi
-  source "$BANG_DIR/lib/predictor.sh"
+  source "$UMWELT_DIR/lib/predictor.sh"
 
   local loaders
   loaders=$(predict_needed_loaders "$message")
 
   if [ -z "$loaders" ]; then
-    echo -e "${DIM}[bang:predict] No loaders matched message keywords${NC}" >&2
+    echo -e "${DIM}[umwelt:predict] No loaders matched message keywords${NC}" >&2
     return 0
   fi
 
-  echo -e "${DIM}[bang:predict] Running predicted loaders: ${loaders}${NC}" >&2
+  echo -e "${DIM}[umwelt:predict] Running predicted loaders: ${loaders}${NC}" >&2
 
   for loader in $loaders; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
@@ -828,8 +828,8 @@ smart_compose() {
   local message="${2:-}"
 
   # Source both systems
-  [ -f "$BANG_DIR/lib/event-router.sh" ] && source "$BANG_DIR/lib/event-router.sh"
-  [ -f "$BANG_DIR/lib/predictor.sh" ] && source "$BANG_DIR/lib/predictor.sh"
+  [ -f "$UMWELT_DIR/lib/event-router.sh" ] && source "$UMWELT_DIR/lib/event-router.sh"
+  [ -f "$UMWELT_DIR/lib/predictor.sh" ] && source "$UMWELT_DIR/lib/predictor.sh"
 
   local event_loaders=""
   local predicted_loaders=""
@@ -857,7 +857,7 @@ smart_compose() {
     return 0
   fi
 
-  echo -e "${DIM}[bang:smart] ${event}: running ${all_loaders}${NC}" >&2
+  echo -e "${DIM}[umwelt:smart] ${event}: running ${all_loaders}${NC}" >&2
 
   for loader in $all_loaders; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
@@ -902,13 +902,13 @@ budget_run_profile() {
     local recommended
     recommended=$(should_downgrade "$profile")
     if [ "$recommended" != "$profile" ]; then
-      echo "[bang:budget] Downgrading ${profile} -> ${recommended} ($(budget_status_line))" >&2
+      echo "[umwelt:budget] Downgrading ${profile} -> ${recommended} ($(budget_status_line))" >&2
       profile="$recommended"
     fi
   fi
 
   if [ "$profile" = "silent" ]; then
-    echo "[bang:budget] Token budget exhausted — silent mode" >&2
+    echo "[umwelt:budget] Token budget exhausted — silent mode" >&2
     return 0
   fi
 
@@ -938,16 +938,16 @@ main() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --diff)
-        BANG_DIFF_MODE=1
+        UMWELT_DIFF_MODE=1
         shift
         ;;
       --model)
-        BANG_MODEL_FLAG="${2:-sonnet}"
+        UMWELT_MODEL_FLAG="${2:-sonnet}"
         shift 2
         ;;
       --budget)
-        BANG_BUDGET_FLAG="${2:-10000}"
-        export BANG_TOKEN_BUDGET="$BANG_BUDGET_FLAG"
+        UMWELT_BUDGET_FLAG="${2:-10000}"
+        export UMWELT_TOKEN_BUDGET="$UMWELT_BUDGET_FLAG"
         shift 2
         ;;
       *)
@@ -971,13 +971,13 @@ main() {
       show_help
       ;;
     --version|-v)
-      echo "bang v${VERSION}"
+      echo "umwelt v${VERSION}"
       ;;
     list)
       list_all
       ;;
     compose)
-      if [ "$BANG_DIFF_MODE" = "1" ]; then
+      if [ "$UMWELT_DIFF_MODE" = "1" ]; then
         diff_compose_loaders "$@"
       else
         compose_loaders "$@"
@@ -995,13 +995,13 @@ main() {
         exit 1
       fi
       # Model override: haiku → force minimal
-      if [ -n "$BANG_MODEL_FLAG" ]; then
-        case "$BANG_MODEL_FLAG" in
+      if [ -n "$UMWELT_MODEL_FLAG" ]; then
+        case "$UMWELT_MODEL_FLAG" in
           *haiku*|*Haiku*) profile="minimal" ;;
         esac
       fi
       # Budget-aware execution
-      if [ -n "$BANG_BUDGET_FLAG" ]; then
+      if [ -n "$UMWELT_BUDGET_FLAG" ]; then
         budget_run_profile "$profile" "$@"
       else
         PROFILE_PATH="$PROFILES_DIR/${profile}.sh"
@@ -1040,8 +1040,8 @@ main() {
       smart_compose "$@"
       ;;
     unified)
-      if [ -f "$BANG_DIR/lib/unified-engine.sh" ]; then
-        source "$BANG_DIR/lib/unified-engine.sh"
+      if [ -f "$UMWELT_DIR/lib/unified-engine.sh" ]; then
+        source "$UMWELT_DIR/lib/unified-engine.sh"
         assemble_unified_context "${1:-UserPromptSubmit}" "${2:-}"
       else
         echo -e "${RED}Error: unified-engine.sh not found${NC}" >&2
@@ -1049,8 +1049,8 @@ main() {
       fi
       ;;
     cost)
-      if [ -f "$BANG_DIR/lib/cost-tracker.sh" ]; then
-        "$BANG_DIR/lib/cost-tracker.sh" "${1:-status}"
+      if [ -f "$UMWELT_DIR/lib/cost-tracker.sh" ]; then
+        "$UMWELT_DIR/lib/cost-tracker.sh" "${1:-status}"
       else
         echo -e "${RED}Error: cost-tracker.sh not found${NC}" >&2
         exit 1
@@ -1066,7 +1066,7 @@ main() {
       # Try as a loader name
       LOADER_PATH="$LOADERS_DIR/${cmd}.sh"
       if [ -f "$LOADER_PATH" ]; then
-        if [ "$BANG_DIFF_MODE" = "1" ]; then
+        if [ "$UMWELT_DIFF_MODE" = "1" ]; then
           local output
           output=$("$LOADER_PATH" "$@" 2>&1)
           if diff_inject "$cmd" "$output"; then
@@ -1079,7 +1079,7 @@ main() {
         fi
       else
         echo -e "${RED}Error: unknown command '${cmd}'${NC}" >&2
-        echo "Run 'bang --help' for usage." >&2
+        echo "Run 'umwelt --help' for usage." >&2
         exit 1
       fi
       ;;

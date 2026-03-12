@@ -2,8 +2,8 @@
 # Comprehensive tests for cache system
 set -euo pipefail
 
-BANG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG_LIB="$BANG_DIR/lib/config.sh"
+UMWELT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG_LIB="$UMWELT_DIR/lib/config.sh"
 
 # ═══════════════════════════════════════════════════════════════════
 # BASIC CACHE FUNCTIONALITY
@@ -33,42 +33,42 @@ test_cache_functions_exist() {
 
 test_cache_init_creates_directory() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-$$"
 
   cache_init
-  [ -d "$BANG_CACHE_DIR" ]
+  [ -d "$UMWELT_CACHE_DIR" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_init_when_disabled() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=0
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-disabled-$$"
+  export UMWELT_CACHE_ENABLED=0
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-disabled-$$"
 
   cache_init
   # Should not create directory when disabled
   true
 
   # Cleanup if created
-  rm -rf "$BANG_CACHE_DIR" 2>/dev/null || true
+  rm -rf "$UMWELT_CACHE_DIR" 2>/dev/null || true
 }
 
 test_cache_init_idempotent() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-idem-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-idem-$$"
 
   cache_init
   cache_init
   cache_init
 
-  [ -d "$BANG_CACHE_DIR" ]
+  [ -d "$UMWELT_CACHE_DIR" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -119,7 +119,7 @@ test_cache_key_includes_project() {
   # Keys should differ based on working directory
   local key1 key2
   key1=$(cd /tmp && cache_key "loader" "args")
-  key2=$(cd "$BANG_DIR" && cache_key "loader" "args")
+  key2=$(cd "$UMWELT_DIR" && cache_key "loader" "args")
 
   # These might be the same or different depending on hash collision
   # Just verify both are generated
@@ -133,8 +133,8 @@ test_cache_key_includes_project() {
 
 test_cache_set_and_get() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-setget-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-setget-$$"
   cache_init
 
   local key
@@ -146,13 +146,13 @@ test_cache_set_and_get() {
   [ "$retrieved" = "test data value" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_get_miss() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-miss-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-miss-$$"
   cache_init
 
   # Try to get non-existent key
@@ -162,13 +162,13 @@ test_cache_get_miss() {
   [ "$exit_code" -ne 0 ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_multiline_data() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-multiline-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-multiline-$$"
   cache_init
 
   local key
@@ -184,13 +184,13 @@ line3"
   [ "$retrieved" = "$data" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_empty_data() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-empty-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-empty-$$"
   cache_init
 
   local key
@@ -201,7 +201,7 @@ test_cache_empty_data() {
   cache_get "$key" &>/dev/null || true
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -210,9 +210,9 @@ test_cache_empty_data() {
 
 test_cache_ttl_fresh() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_TTL=10
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-fresh-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_TTL=10
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-fresh-$$"
   cache_init
 
   local key
@@ -225,14 +225,14 @@ test_cache_ttl_fresh() {
   [ "$retrieved" = "fresh data" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_ttl_expired() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_TTL=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-ttl-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_TTL=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-ttl-$$"
   cache_init
 
   local key
@@ -251,21 +251,21 @@ test_cache_ttl_expired() {
   [ "$exit_code" -ne 0 ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_ttl_default_value() {
   source "$CONFIG_LIB"
 
   # Default TTL should be 300 seconds (5 minutes)
-  [ "$BANG_CACHE_TTL" -eq 300 ] || [ -n "$BANG_CACHE_TTL" ]
+  [ "$UMWELT_CACHE_TTL" -eq 300 ] || [ -n "$UMWELT_CACHE_TTL" ]
 }
 
 test_cache_ttl_custom_value() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_TTL=600
+  export UMWELT_CACHE_TTL=600
 
-  [ "$BANG_CACHE_TTL" -eq 600 ]
+  [ "$UMWELT_CACHE_TTL" -eq 600 ]
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -274,8 +274,8 @@ test_cache_ttl_custom_value() {
 
 test_cache_invalidate_loader() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-invalidate-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-invalidate-$$"
   cache_init
 
   local key
@@ -290,13 +290,13 @@ test_cache_invalidate_loader() {
   [ "$exit_code" -ne 0 ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_invalidate_specific_loader_only() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-inv-specific-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-inv-specific-$$"
   cache_init
 
   local key1 key2
@@ -319,20 +319,20 @@ test_cache_invalidate_specific_loader_only() {
   [ "$retrieved" = "data2" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_invalidate_nonexistent() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-inv-none-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-inv-none-$$"
   cache_init
 
   # Should not error when invalidating non-existent loader
   cache_invalidate "nonexistent-loader" || true
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -341,8 +341,8 @@ test_cache_invalidate_nonexistent() {
 
 test_cache_clear_all() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-clear-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-clear-$$"
   cache_init
 
   cache_set "key1" "value1"
@@ -353,17 +353,17 @@ test_cache_clear_all() {
 
   # Cache dir should be empty
   local count
-  count=$(ls "$BANG_CACHE_DIR" 2>/dev/null | wc -l | tr -d ' ')
+  count=$(ls "$UMWELT_CACHE_DIR" 2>/dev/null | wc -l | tr -d ' ')
   [ "$count" -eq 0 ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_clear_idempotent() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-clear-idem-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-clear-idem-$$"
   cache_init
 
   cache_clear
@@ -374,7 +374,7 @@ test_cache_clear_idempotent() {
   true
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -383,24 +383,24 @@ test_cache_clear_idempotent() {
 
 test_cache_disabled_set() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=0
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-disabled-set-$$"
+  export UMWELT_CACHE_ENABLED=0
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-disabled-set-$$"
 
   local key
   key=$(cache_key "test" "disabled")
   cache_set "$key" "data"
 
   # Should not create cache file
-  [ ! -f "$BANG_CACHE_DIR/$key" ]
+  [ ! -f "$UMWELT_CACHE_DIR/$key" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR" 2>/dev/null || true
+  rm -rf "$UMWELT_CACHE_DIR" 2>/dev/null || true
 }
 
 test_cache_disabled_get() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=0
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-disabled-get-$$"
+  export UMWELT_CACHE_ENABLED=0
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-disabled-get-$$"
 
   local exit_code=0
   cache_get "any-key" &>/dev/null || exit_code=$?
@@ -409,7 +409,7 @@ test_cache_disabled_get() {
   [ "$exit_code" -ne 0 ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR" 2>/dev/null || true
+  rm -rf "$UMWELT_CACHE_DIR" 2>/dev/null || true
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -418,8 +418,8 @@ test_cache_disabled_get() {
 
 test_cache_special_characters() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-special-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-special-$$"
   cache_init
 
   local key
@@ -431,13 +431,13 @@ test_cache_special_characters() {
   [ "$retrieved" = "data" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }
 
 test_cache_large_data() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_DIR="/tmp/bang-test-cache-large-$$"
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_DIR="/tmp/bang-test-cache-large-$$"
   cache_init
 
   # Generate large data (1000 lines)
@@ -458,5 +458,5 @@ test_cache_large_data() {
   [ -n "$retrieved" ]
 
   # Cleanup
-  rm -rf "$BANG_CACHE_DIR"
+  rm -rf "$UMWELT_CACHE_DIR"
 }

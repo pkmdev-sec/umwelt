@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bang-framework: Centralized output formatting
+# umwelt: Centralized output formatting
 # Text and JSON rendering functions with jq/python3 fallback
 set -euo pipefail
 
@@ -326,7 +326,7 @@ text_volatile_footer() {
 # Determine output format from args and config
 # Usage: OUTPUT_FMT=$(detect_output_format "$@")
 detect_output_format() {
-  local fmt="${BANG_OUTPUT_FORMAT:-text}"
+  local fmt="${UMWELT_OUTPUT_FORMAT:-text}"
   for arg in "$@"; do
     if [ "$arg" = "--json" ]; then
       fmt="json"

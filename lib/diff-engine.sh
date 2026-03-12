@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# bang-framework: Diff-based injection engine (Innovation 10)
+# umwelt: Diff-based injection engine (Innovation 10)
 # Caches previous loader outputs and only injects changes
 set -euo pipefail
 
-BANG_DIFF_CACHE_DIR="${BANG_DIFF_CACHE_DIR:-$HOME/.claude/bang-framework/.cache}"
-mkdir -p "$BANG_DIFF_CACHE_DIR"
+UMWELT_DIFF_CACHE_DIR="${UMWELT_DIFF_CACHE_DIR:-$HOME/.claude/umwelt/.cache}"
+mkdir -p "$UMWELT_DIFF_CACHE_DIR"
 
 # Check if loader output has changed since last call
 # Returns 0 if changed (should inject), 1 if unchanged (skip)
@@ -12,7 +12,7 @@ mkdir -p "$BANG_DIFF_CACHE_DIR"
 diff_inject() {
     local loader_name="$1"
     local current_output="$2"
-    local cache_file="$BANG_DIFF_CACHE_DIR/${loader_name}.last"
+    local cache_file="$UMWELT_DIFF_CACHE_DIR/${loader_name}.last"
 
     if [ -f "$cache_file" ]; then
         local previous
@@ -33,7 +33,7 @@ diff_inject() {
 get_diff_summary() {
     local loader_name="$1"
     local current_output="$2"
-    local cache_file="$BANG_DIFF_CACHE_DIR/${loader_name}.last"
+    local cache_file="$UMWELT_DIFF_CACHE_DIR/${loader_name}.last"
 
     if [ -f "$cache_file" ]; then
         local diff_count
@@ -47,7 +47,7 @@ get_diff_summary() {
 # Reset all cached outputs
 # Usage: reset_cache
 reset_cache() {
-    rm -f "$BANG_DIFF_CACHE_DIR"/*.last 2>/dev/null || true
+    rm -f "$UMWELT_DIFF_CACHE_DIR"/*.last 2>/dev/null || true
 }
 
 # Check if a loader has cached output
@@ -55,7 +55,7 @@ reset_cache() {
 # Usage: has_cache "loader_name"
 has_cache() {
     local loader_name="$1"
-    local cache_file="$BANG_DIFF_CACHE_DIR/${loader_name}.last"
+    local cache_file="$UMWELT_DIFF_CACHE_DIR/${loader_name}.last"
     [ -f "$cache_file" ]
 }
 
@@ -63,7 +63,7 @@ has_cache() {
 # Usage: cached=$(get_cached "loader_name")
 get_cached() {
     local loader_name="$1"
-    local cache_file="$BANG_DIFF_CACHE_DIR/${loader_name}.last"
+    local cache_file="$UMWELT_DIFF_CACHE_DIR/${loader_name}.last"
     if [ -f "$cache_file" ]; then
         cat "$cache_file"
     fi

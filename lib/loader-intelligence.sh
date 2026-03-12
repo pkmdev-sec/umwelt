@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# bang-framework: Intelligent Loaders (Innovation 7)
+# umwelt: Intelligent Loaders (Innovation 7)
 # Smart loader selection — skip irrelevant loaders, estimate tokens, format output
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-LOADERS_DIR="$BANG_DIR/loaders"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+LOADERS_DIR="$UMWELT_DIR/loaders"
 
 # Source config if available
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
 
 # ─── Loader Relevance Detection ──────────────────────────────
@@ -32,7 +32,7 @@ is_loader_relevant() {
     api-health)
       # Skip if no services are responding on common ports
       local has_service=false
-      local ports="${BANG_LOCAL_PORTS:-3000:dev 8000:api 8080:proxy}"
+      local ports="${UMWELT_LOCAL_PORTS:-3000:dev 8000:api 8080:proxy}"
       for entry in $ports; do
         local port="${entry%%:*}"
         if nc -z localhost "$port" &>/dev/null 2>&1; then
@@ -41,7 +41,7 @@ is_loader_relevant() {
         fi
       done
       # Also check custom endpoints
-      if [ -n "${BANG_API_ENDPOINTS:-}" ]; then
+      if [ -n "${UMWELT_API_ENDPOINTS:-}" ]; then
         has_service=true
       fi
       if [ "$has_service" = "true" ]; then
@@ -52,7 +52,7 @@ is_loader_relevant() {
 
     test-status)
       # Skip if no test framework detected
-      local project_dir="${BANG_PROJECT_DIR:-.}"
+      local project_dir="${UMWELT_PROJECT_DIR:-.}"
       if [ -f "$project_dir/package.json" ]; then
         if grep -qE '"(vitest|jest|mocha|test)"' "$project_dir/package.json" 2>/dev/null; then
           return 0
@@ -69,7 +69,7 @@ is_loader_relevant() {
 
     deps-audit)
       # Skip if no dependency manifest detected
-      local project_dir="${BANG_PROJECT_DIR:-.}"
+      local project_dir="${UMWELT_PROJECT_DIR:-.}"
       if [ -f "$project_dir/package.json" ] || [ -f "$project_dir/requirements.txt" ] || \
          [ -f "$project_dir/Cargo.toml" ] || [ -f "$project_dir/go.mod" ] || \
          [ -f "$project_dir/pyproject.toml" ] || [ -f "$project_dir/Gemfile" ]; then

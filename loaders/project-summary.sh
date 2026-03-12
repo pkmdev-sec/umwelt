@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# bang-framework: project-summary loader
+# umwelt: project-summary loader
 # High-level project overview — structure, size, tech stack, entry points
-# Usage: bang project-summary [--full|--json]
+# Usage: umwelt project-summary [--full|--json]
 set -euo pipefail
 
 # Source config and output systems
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
 
 MODE="${1:-default}"
-OUTPUT_FMT="${BANG_OUTPUT_FORMAT:-text}"
+OUTPUT_FMT="${UMWELT_OUTPUT_FORMAT:-text}"
 for arg in "$@"; do
   if [ "$arg" = "--json" ]; then OUTPUT_FMT="json"; fi
 done
 
-PROJECT_DIR="${BANG_PROJECT_DIR:-.}"
-SCAN_DEPTH="${BANG_SCAN_DEPTH:-4}"
-FILE_EXTENSIONS="${BANG_FILE_EXTENSIONS:-ts tsx js jsx py rs go swift java kt rb php css scss html md json yaml yml toml}"
-EXCLUDE_DIRS="${BANG_EXCLUDE_DIRS:-node_modules .git dist build .next .nuxt target __pycache__ .pytest_cache coverage .mypy_cache Library}"
+PROJECT_DIR="${UMWELT_PROJECT_DIR:-.}"
+SCAN_DEPTH="${UMWELT_SCAN_DEPTH:-4}"
+FILE_EXTENSIONS="${UMWELT_FILE_EXTENSIONS:-ts tsx js jsx py rs go swift java kt rb php css scss html md json yaml yml toml}"
+EXCLUDE_DIRS="${UMWELT_EXCLUDE_DIRS:-node_modules .git dist build .next .nuxt target __pycache__ .pytest_cache coverage .mypy_cache Library}"
 
 # Build find exclude pattern
 FIND_EXCLUDES=""

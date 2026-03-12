@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bang-framework: Predictive Context Loading (Innovation 9)
+# umwelt: Predictive Context Loading (Innovation 9)
 # Analyzes user message content to predict which loaders are relevant,
 # so only the needed subset runs instead of everything.
 #
@@ -15,10 +15,10 @@
 #
 # Usage: source this file, then call predict_needed_loaders "user message"
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
 # Default minimum score to include a loader
-BANG_PREDICTOR_MIN_SCORE="${BANG_PREDICTOR_MIN_SCORE:-20}"
+UMWELT_PREDICTOR_MIN_SCORE="${UMWELT_PREDICTOR_MIN_SCORE:-20}"
 
 # ─── Keyword definitions ────────────────────────────────────────
 # Each loader has a set of keywords with weights.
@@ -96,7 +96,7 @@ score_loader_relevance() {
 filter_loaders() {
   local loaders="$1"
   local keywords="$2"
-  local min_score="${3:-$BANG_PREDICTOR_MIN_SCORE}"
+  local min_score="${3:-$UMWELT_PREDICTOR_MIN_SCORE}"
   local result=""
 
   for loader in $loaders; do
@@ -117,7 +117,7 @@ filter_loaders() {
 # Output: space-separated loader names, ordered by relevance score descending
 predict_needed_loaders() {
   local message="$1"
-  local min_score="${2:-$BANG_PREDICTOR_MIN_SCORE}"
+  local min_score="${2:-$UMWELT_PREDICTOR_MIN_SCORE}"
 
   local keywords
   keywords=$(extract_keywords "$message")

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# bang-framework: git-context loader
+# umwelt: git-context loader
 # Outputs current git state — branch, status, recent commits, stash
-# Usage: bang git-context [--full|--minimal|--diff] [--json]
+# Usage: umwelt git-context [--full|--minimal|--diff] [--json]
 set -euo pipefail
 
 # Source config, cache, and output systems
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
 
 MODE="${1:-default}"
 # Check for --json flag in any position
-OUTPUT_FMT="${BANG_OUTPUT_FORMAT:-text}"
+OUTPUT_FMT="${UMWELT_OUTPUT_FORMAT:-text}"
 for arg in "$@"; do
   if [ "$arg" = "--json" ]; then OUTPUT_FMT="json"; fi
 done
@@ -32,7 +32,7 @@ fi
 
 # ─── Delta Mode (only changes since last call) ────────────────
 if [ "$MODE" = "--delta" ]; then
-  CACHE_TS_FILE="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}/git-context-last-call"
+  CACHE_TS_FILE="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}/git-context-last-call"
   mkdir -p "$(dirname "$CACHE_TS_FILE")"
   NOW=$(date +%s)
 
@@ -146,7 +146,7 @@ while IFS= read -r line; do
 done < <(_git_status_normalized)
 
 # Recent commits (configurable count)
-LOG_COUNT="${BANG_GIT_LOG_COUNT:-5}"
+LOG_COUNT="${UMWELT_GIT_LOG_COUNT:-5}"
 RECENT_COMMITS=""
 RECENT_COMMITS_JSON=""
 if git log --oneline -1 &>/dev/null; then
@@ -180,7 +180,7 @@ fi
 # ─── Diff Data (for --full and --diff modes) ───────────────────
 STAGED_DIFF=""
 UNSTAGED_DIFF=""
-DIFF_MAX="${BANG_DIFF_MAX_LINES:-100}"
+DIFF_MAX="${UMWELT_DIFF_MAX_LINES:-100}"
 
 if [ "$MODE" = "--full" ] || [ "$MODE" = "--diff" ]; then
   if [ "$STAGED_COUNT" -gt 0 ]; then

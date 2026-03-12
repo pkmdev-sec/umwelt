@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# bang-framework profile: dev
+# umwelt profile: dev
 # Full development context — git state, tests, environment, project overview
-# Usage: bang profile dev [--full|--minimal]
+# Usage: umwelt profile dev [--full|--minimal]
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 MODE="${1:-default}"
 
 # Source config and parallel execution
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/parallel.sh" ]; then
-  source "$BANG_DIR/lib/parallel.sh"
+if [ -f "$UMWELT_DIR/lib/parallel.sh" ]; then
+  source "$UMWELT_DIR/lib/parallel.sh"
 fi
 
 # Minimal mode: git + project summary only (fast, for SubagentStart)
 if [ "$MODE" = "--minimal" ]; then
-  echo "── bang: dev (minimal) ──"
+  echo "── umwelt: dev (minimal) ──"
   parallel_run \
     "git-context --minimal" \
     "project-summary --minimal"

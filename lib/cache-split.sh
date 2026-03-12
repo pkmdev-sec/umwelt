@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# bang-framework: Cache-friendly output splitter (Innovation 2)
+# umwelt: Cache-friendly output splitter (Innovation 2)
 # Splits context into STABLE (cached) and VOLATILE (always fresh) sections
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_DIFF_CACHE_DIR="${BANG_DIFF_CACHE_DIR:-$HOME/.claude/bang-framework/.cache}"
-mkdir -p "$BANG_DIFF_CACHE_DIR"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_DIFF_CACHE_DIR="${UMWELT_DIFF_CACHE_DIR:-$HOME/.claude/umwelt/.cache}"
+mkdir -p "$UMWELT_DIFF_CACHE_DIR"
 
-STABLE_CACHE_FILE="$BANG_DIFF_CACHE_DIR/stable-context.cache"
-BANG_CALL_COUNT_FILE="$BANG_DIFF_CACHE_DIR/call-count"
+STABLE_CACHE_FILE="$UMWELT_DIFF_CACHE_DIR/stable-context.cache"
+UMWELT_CALL_COUNT_FILE="$UMWELT_DIFF_CACHE_DIR/call-count"
 
 # Source diff engine for change detection
-if [ -f "$BANG_DIR/lib/diff-engine.sh" ]; then
-    source "$BANG_DIR/lib/diff-engine.sh"
+if [ -f "$UMWELT_DIR/lib/diff-engine.sh" ]; then
+    source "$UMWELT_DIR/lib/diff-engine.sh"
 fi
 
 # ─── STABLE CONTEXT ────────────────────────────────────────────
@@ -142,11 +142,11 @@ format_volatile_context() {
 
 format_cached_output() {
     local call_count=0
-    if [ -f "$BANG_CALL_COUNT_FILE" ]; then
-        call_count=$(cat "$BANG_CALL_COUNT_FILE")
+    if [ -f "$UMWELT_CALL_COUNT_FILE" ]; then
+        call_count=$(cat "$UMWELT_CALL_COUNT_FILE")
     fi
     call_count=$((call_count + 1))
-    echo "$call_count" > "$BANG_CALL_COUNT_FILE"
+    echo "$call_count" > "$UMWELT_CALL_COUNT_FILE"
 
     local stable_output
     stable_output=$(format_stable_context)
@@ -180,5 +180,5 @@ format_cached_output() {
 
 # Reset the call counter and stable cache (for new sessions)
 reset_cache_split() {
-    rm -f "$STABLE_CACHE_FILE" "$BANG_CALL_COUNT_FILE" 2>/dev/null || true
+    rm -f "$STABLE_CACHE_FILE" "$UMWELT_CALL_COUNT_FILE" 2>/dev/null || true
 }

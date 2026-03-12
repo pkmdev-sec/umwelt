@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bang-framework: Smart PreCompact (Innovation 3)
+# umwelt: Smart PreCompact (Innovation 3)
 # When compaction is about to happen, collects critical environment state
 # into a compact summary that survives the compaction cycle.
 #
@@ -13,16 +13,16 @@
 # Usage: bang-precompact.sh
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
 STATE_FILE="$CACHE_DIR/precompact-state.json"
 
 # Source config
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
 
 mkdir -p "$CACHE_DIR"

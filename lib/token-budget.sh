@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# bang-framework: Token-aware profiling (Innovation 1)
+# umwelt: Token-aware profiling (Innovation 1)
 # Estimates token usage and auto-downgrades profiles to stay within budget
 set -euo pipefail
 
-BANG_DIFF_CACHE_DIR="${BANG_DIFF_CACHE_DIR:-$HOME/.claude/bang-framework/.cache}"
-mkdir -p "$BANG_DIFF_CACHE_DIR"
+UMWELT_DIFF_CACHE_DIR="${UMWELT_DIFF_CACHE_DIR:-$HOME/.claude/umwelt/.cache}"
+mkdir -p "$UMWELT_DIFF_CACHE_DIR"
 
 # Default token budget per session (adjustable via --budget flag or env var)
-BANG_TOKEN_BUDGET="${BANG_TOKEN_BUDGET:-10000}"
-BANG_TOKEN_COUNT_FILE="$BANG_DIFF_CACHE_DIR/token-count"
+UMWELT_TOKEN_BUDGET="${UMWELT_TOKEN_BUDGET:-10000}"
+UMWELT_TOKEN_COUNT_FILE="$UMWELT_DIFF_CACHE_DIR/token-count"
 
 # Estimate token count from text (chars / 4 approximation)
 # Usage: tokens=$(estimate_tokens "$text")
@@ -21,8 +21,8 @@ estimate_tokens() {
 # Get cumulative tokens injected this session
 # Usage: total=$(get_session_tokens)
 get_session_tokens() {
-    if [ -f "$BANG_TOKEN_COUNT_FILE" ]; then
-        cat "$BANG_TOKEN_COUNT_FILE"
+    if [ -f "$UMWELT_TOKEN_COUNT_FILE" ]; then
+        cat "$UMWELT_TOKEN_COUNT_FILE"
     else
         echo "0"
     fi
@@ -37,7 +37,7 @@ track_tokens() {
     local current
     current=$(get_session_tokens)
     local total=$((current + new_tokens))
-    echo "$total" > "$BANG_TOKEN_COUNT_FILE"
+    echo "$total" > "$UMWELT_TOKEN_COUNT_FILE"
     echo "$total"
 }
 
@@ -46,7 +46,7 @@ track_tokens() {
 check_token_budget() {
     local used
     used=$(get_session_tokens)
-    local remaining=$((BANG_TOKEN_BUDGET - used))
+    local remaining=$((UMWELT_TOKEN_BUDGET - used))
     if [ "$remaining" -lt 0 ]; then
         remaining=0
     fi
@@ -58,11 +58,11 @@ check_token_budget() {
 get_budget_percentage() {
     local used
     used=$(get_session_tokens)
-    if [ "$BANG_TOKEN_BUDGET" -eq 0 ]; then
+    if [ "$UMWELT_TOKEN_BUDGET" -eq 0 ]; then
         echo "100"
         return
     fi
-    echo $(( (used * 100) / BANG_TOKEN_BUDGET ))
+    echo $(( (used * 100) / UMWELT_TOKEN_BUDGET ))
 }
 
 # Determine if profile should be downgraded based on budget usage
@@ -98,7 +98,7 @@ should_downgrade() {
 # Reset session token counter
 # Usage: reset_token_count
 reset_token_count() {
-    rm -f "$BANG_TOKEN_COUNT_FILE" 2>/dev/null || true
+    rm -f "$UMWELT_TOKEN_COUNT_FILE" 2>/dev/null || true
 }
 
 # Get a budget status line for output
@@ -110,5 +110,5 @@ budget_status_line() {
     remaining=$(check_token_budget)
     local pct
     pct=$(get_budget_percentage)
-    echo "[tokens: ${used}/${BANG_TOKEN_BUDGET} (${pct}% used, ${remaining} remaining)]"
+    echo "[tokens: ${used}/${UMWELT_TOKEN_BUDGET} (${pct}% used, ${remaining} remaining)]"
 }

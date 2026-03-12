@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
-# bang-framework: api-health loader
+# umwelt: api-health loader
 # Checks health of local and configured API endpoints
-# Usage: bang api-health [--full|--json]
-# Config: BANG_LOCAL_PORTS, BANG_API_ENDPOINTS="url1,url2"
+# Usage: umwelt api-health [--full|--json]
+# Config: UMWELT_LOCAL_PORTS, UMWELT_API_ENDPOINTS="url1,url2"
 set -euo pipefail
 
 # Source config and output systems
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
 
 MODE="${1:-default}"
-OUTPUT_FMT="${BANG_OUTPUT_FORMAT:-text}"
+OUTPUT_FMT="${UMWELT_OUTPUT_FORMAT:-text}"
 for arg in "$@"; do
   if [ "$arg" = "--json" ]; then OUTPUT_FMT="json"; fi
 done
 
 # Use configurable port list (from config.sh or default)
-PORTS="${BANG_LOCAL_PORTS:-3000:dev-server 3001:dev-alt 4000:graphql 5000:flask 5173:vite 5432:postgres 6379:redis 8000:uvicorn 8080:proxy 8443:https-alt 9090:prometheus 27017:mongodb}"
+PORTS="${UMWELT_LOCAL_PORTS:-3000:dev-server 3001:dev-alt 4000:graphql 5000:flask 5173:vite 5432:postgres 6379:redis 8000:uvicorn 8080:proxy 8443:https-alt 9090:prometheus 27017:mongodb}"
 
 # ─── Check a single port ────────────────────────────────────────
 check_port() {
@@ -50,8 +50,8 @@ for entry in $PORTS; do
 done
 
 # Custom endpoints from env var
-if [ -n "${BANG_API_ENDPOINTS:-}" ]; then
-  IFS=',' read -ra ENDPOINTS <<< "$BANG_API_ENDPOINTS"
+if [ -n "${UMWELT_API_ENDPOINTS:-}" ]; then
+  IFS=',' read -ra ENDPOINTS <<< "$UMWELT_API_ENDPOINTS"
   for url in "${ENDPOINTS[@]}"; do
     url=$(echo "$url" | xargs)
     STATUS=$(curl -s --connect-timeout 3 -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "ERR")

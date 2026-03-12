@@ -2,8 +2,8 @@
 # Tests for Innovation 7: Intelligent Loaders
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-source "$BANG_DIR/lib/loader-intelligence.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+source "$UMWELT_DIR/lib/loader-intelligence.sh"
 
 PASSED=0
 FAILED=0

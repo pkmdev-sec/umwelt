@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Comprehensive test runner for bang-framework
+# Comprehensive test runner for umwelt
 # Executes all test files and reports results in TAP format
 set -euo pipefail
 
 cd "$(dirname "$0")"
-BANG_DIR="$(cd .. && pwd)"
+UMWELT_DIR="$(cd .. && pwd)"
 
 # Colors for output
 RED='\033[0;31m'

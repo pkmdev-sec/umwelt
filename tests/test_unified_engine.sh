@@ -2,11 +2,11 @@
 # Tests for Innovation 8: Bang + Sigil Unified Context Engine
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
 PROMPT_STUDIO_DIR="${PROMPT_STUDIO_DIR:-$HOME/.claude/prompt-studio}"
 
-source "$BANG_DIR/lib/unified-engine.sh"
+source "$UMWELT_DIR/lib/unified-engine.sh"
 
 PASSED=0
 FAILED=0
@@ -152,21 +152,21 @@ rm -f "$TEMP_TEMPLATE_DIR/_test_unified.md"
 rm -f "$TEMP_ACTIVE"
 
 # Test 15: CLI interface — priority-order
-cli_output=$("$BANG_DIR/lib/unified-engine.sh" priority-order 2>/dev/null)
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" priority-order 2>/dev/null)
 assert_match "CLI priority-order works" 'sigil-template' "$cli_output"
 
 # Test 16: CLI interface — stable
-cli_output=$("$BANG_DIR/lib/unified-engine.sh" stable 2>/dev/null)
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" stable 2>/dev/null)
 assert_match "CLI stable works" 'os:' "$cli_output"
 
 # Test 17: CLI interface — volatile
-cli_output=$("$BANG_DIR/lib/unified-engine.sh" volatile 2>/dev/null || true)
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" volatile 2>/dev/null || true)
 # May be empty if not in git repo, that's ok
 assert_eq "CLI volatile runs without error" "0" "$?"
 
 # Clean up
 reset_session_cost 2>/dev/null || true
-rm -f "$BANG_CACHE_DIR/stable-context"
+rm -f "$UMWELT_CACHE_DIR/stable-context"
 
 echo ""
 echo "# Results: $PASSED passed, $FAILED failed"

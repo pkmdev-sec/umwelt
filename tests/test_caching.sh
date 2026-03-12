@@ -2,8 +2,8 @@
 # Tests for caching system
 set -euo pipefail
 
-BANG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG_LIB="$BANG_DIR/lib/config.sh"
+UMWELT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG_LIB="$UMWELT_DIR/lib/config.sh"
 
 # Test: config.sh can be sourced
 test_config_sources() {
@@ -13,9 +13,9 @@ test_config_sources() {
 # Test: cache initialization
 test_cache_init() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
+  export UMWELT_CACHE_ENABLED=1
   cache_init
-  [ -d "$BANG_CACHE_DIR" ]
+  [ -d "$UMWELT_CACHE_DIR" ]
 }
 
 # Test: cache key generation
@@ -34,7 +34,7 @@ test_cache_key_generation() {
 # Test: cache set and get
 test_cache_set_and_get() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
+  export UMWELT_CACHE_ENABLED=1
   cache_init
 
   local key
@@ -49,8 +49,8 @@ test_cache_set_and_get() {
 # Test: cache TTL expiration
 test_cache_ttl() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
-  export BANG_CACHE_TTL=1
+  export UMWELT_CACHE_ENABLED=1
+  export UMWELT_CACHE_TTL=1
   cache_init
 
   local key
@@ -70,7 +70,7 @@ test_cache_ttl() {
 # Test: cache invalidation
 test_cache_invalidate() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
+  export UMWELT_CACHE_ENABLED=1
   cache_init
 
   local key
@@ -86,7 +86,7 @@ test_cache_invalidate() {
 # Test: cache clear
 test_cache_clear() {
   source "$CONFIG_LIB"
-  export BANG_CACHE_ENABLED=1
+  export UMWELT_CACHE_ENABLED=1
   cache_init
 
   cache_set "key1" "value1"
@@ -96,6 +96,6 @@ test_cache_clear() {
 
   # Cache dir should be empty
   local count
-  count=$(ls "$BANG_CACHE_DIR" 2>/dev/null | wc -l | tr -d ' ')
+  count=$(ls "$UMWELT_CACHE_DIR" 2>/dev/null | wc -l | tr -d ' ')
   [ "$count" -eq 0 ]
 }

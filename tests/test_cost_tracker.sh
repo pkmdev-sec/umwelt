@@ -2,8 +2,8 @@
 # Tests for Innovation 6: Cost-Conscious Scanning
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-source "$BANG_DIR/lib/cost-tracker.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+source "$UMWELT_DIR/lib/cost-tracker.sh"
 
 PASSED=0
 FAILED=0

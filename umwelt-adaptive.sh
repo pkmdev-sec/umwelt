@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# bang-framework: Adaptive profile router (Innovation 5: Model-Aware)
-# Reads task classification from auto_orchestrator and selects the right bang profile.
+# umwelt: Adaptive profile router (Innovation 5: Model-Aware)
+# Reads task classification from auto_orchestrator and selects the right umwelt profile.
 # Detects model tier and adjusts profile weight accordingly.
 # Usage: bang-adaptive.sh [--minimal] [--model <model>]
 # Called by UserPromptSubmit hook AFTER auto_orchestrator.py runs.
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 STATE_FILE="$HOME/.claude/hooks/.acontext_state/delegate_mode.json"
 
 # ─── Parse arguments ───────────────────────────────────────────
@@ -58,7 +58,7 @@ model_default_profile() {
 
 # ─── Read task_type ────────────────────────────────────────────
 TASK_TYPE="IMPLEMENTATION"  # default
-ROUTE_TXT="$HOME/.claude/hooks/.acontext_state/bang_route.txt"
+ROUTE_TXT="$HOME/.claude/hooks/.acontext_state/umwelt_route.txt"
 if [ -f "$ROUTE_TXT" ]; then
   TASK_TYPE=$(cat "$ROUTE_TXT" 2>/dev/null || echo "IMPLEMENTATION")
 elif [ -f "$STATE_FILE" ]; then
@@ -73,7 +73,7 @@ fi
 run_profile() {
   local profile="$1"
   shift
-  "$BANG_DIR/profiles/${profile}.sh" "$@"
+  "$UMWELT_DIR/profiles/${profile}.sh" "$@"
 }
 
 # For haiku: always use minimal regardless of task type
@@ -85,7 +85,7 @@ fi
 case "$TASK_TYPE" in
   DEBUG|FOLLOWUP)
     if [ "$MINIMAL" = "--minimal" ]; then
-      "$BANG_DIR/loaders/git-context.sh" --minimal
+      "$UMWELT_DIR/loaders/git-context.sh" --minimal
     elif [ "$MODEL_TIER" = "opus" ]; then
       run_profile "debug"
     else
@@ -94,15 +94,15 @@ case "$TASK_TYPE" in
     ;;
   REVIEW)
     if [ "$MINIMAL" = "--minimal" ]; then
-      "$BANG_DIR/loaders/git-context.sh" --diff
+      "$UMWELT_DIR/loaders/git-context.sh" --diff
     else
-      "$BANG_DIR/profiles/review.sh"
+      "$UMWELT_DIR/profiles/review.sh"
     fi
     ;;
   RESEARCH)
     if [ "$MINIMAL" = "--minimal" ]; then
-      "$BANG_DIR/loaders/git-context.sh" --minimal
-      "$BANG_DIR/loaders/project-summary.sh" --minimal
+      "$UMWELT_DIR/loaders/git-context.sh" --minimal
+      "$UMWELT_DIR/loaders/project-summary.sh" --minimal
     elif [ "$MODEL_TIER" = "opus" ]; then
       run_profile "dev" --full
     else
@@ -111,8 +111,8 @@ case "$TASK_TYPE" in
     ;;
   IMPLEMENTATION|REFACTOR|*)
     if [ "$MINIMAL" = "--minimal" ]; then
-      "$BANG_DIR/loaders/git-context.sh" --minimal
-      "$BANG_DIR/loaders/project-summary.sh" --minimal
+      "$UMWELT_DIR/loaders/git-context.sh" --minimal
+      "$UMWELT_DIR/loaders/project-summary.sh" --minimal
     else
       run_profile "$(model_default_profile)"
     fi

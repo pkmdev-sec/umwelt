@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
-# bang-framework: Bang + Sigil Unified Context Engine (Innovation 8)
+# umwelt: Bang + Sigil Unified Context Engine (Innovation 8)
 # Combines Bang environment context with Sigil prompt templates
 # into a single optimized injection
 # Compatible with bash 3.2+ (no associative arrays)
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-LOADERS_DIR="$BANG_DIR/loaders"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+LOADERS_DIR="$UMWELT_DIR/loaders"
 PROMPT_STUDIO_DIR="${PROMPT_STUDIO_DIR:-$HOME/.claude/prompt-studio}"
 TEMPLATES_DIR="$PROMPT_STUDIO_DIR/templates"
-BANG_CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+UMWELT_CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
 
 # Source dependencies
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
-if [ -f "$BANG_DIR/lib/cost-tracker.sh" ]; then
-  source "$BANG_DIR/lib/cost-tracker.sh"
+if [ -f "$UMWELT_DIR/lib/cost-tracker.sh" ]; then
+  source "$UMWELT_DIR/lib/cost-tracker.sh"
 fi
-if [ -f "$BANG_DIR/lib/loader-intelligence.sh" ]; then
-  source "$BANG_DIR/lib/loader-intelligence.sh"
+if [ -f "$UMWELT_DIR/lib/loader-intelligence.sh" ]; then
+  source "$UMWELT_DIR/lib/loader-intelligence.sh"
 fi
 
 # Maximum token budget for unified injection
-MAX_INJECTION_TOKENS="${BANG_MAX_INJECTION_TOKENS:-4000}"
+MAX_INJECTION_TOKENS="${UMWELT_MAX_INJECTION_TOKENS:-4000}"
 
 # ─── Priority Lookup (bash 3.2 compatible) ───────────────────
 # Returns priority number for a section name
@@ -88,7 +88,7 @@ load_sigil_template() {
 
 # ─── Stable vs Volatile Context ─────────────────────────────
 get_stable_context() {
-  local cache_file="$BANG_CACHE_DIR/stable-context"
+  local cache_file="$UMWELT_CACHE_DIR/stable-context"
   local cache_ttl=600
 
   if [ -f "$cache_file" ]; then
@@ -123,7 +123,7 @@ cwd: $(pwd)
 "
   fi
 
-  mkdir -p "$BANG_CACHE_DIR"
+  mkdir -p "$UMWELT_CACHE_DIR"
   printf '%s' "$stable" > "$cache_file"
   printf '%s' "$stable"
 }
@@ -192,7 +192,7 @@ assemble_unified_context() {
   # Check cost budget
   if ! should_inject 2>/dev/null; then
     local cost_line
-    cost_line=$(format_cost_summary 2>/dev/null || echo "[Bang: budget exceeded]")
+    cost_line=$(format_cost_summary 2>/dev/null || echo "[Umwelt: budget exceeded]")
     echo "$cost_line"
     return
   fi
@@ -202,7 +202,7 @@ assemble_unified_context() {
 
   # Use temp dir for section storage (bash 3.2 compatible)
   local tmpdir
-  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/bang-unified.XXXXXX")
+  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/umwelt-unified.XXXXXX")
   trap "rm -rf '$tmpdir'" EXIT
 
   local section_count=0

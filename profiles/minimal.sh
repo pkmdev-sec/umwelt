@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# bang-framework profile: minimal
+# umwelt profile: minimal
 # Ultra-lightweight context — cwd + git branch only
 # Target: <200 tokens per injection
 # Designed for haiku-class models where every token counts
-# Usage: bang profile minimal
+# Usage: umwelt profile minimal
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
-echo "── bang: minimal ──"
+echo "── umwelt: minimal ──"
 
 # CWD
 echo "cwd: $(pwd)"

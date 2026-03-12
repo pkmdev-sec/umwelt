@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# bang-framework: Parallel execution engine
+# umwelt: Parallel execution engine
 # Runs loaders concurrently with ordered output collection
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
 # Source config if not already loaded
-if [ "${BANG_CONFIG_LOADED:-0}" != "1" ]; then
+if [ "${UMWELT_CONFIG_LOADED:-0}" != "1" ]; then
   source "$SCRIPT_DIR/config.sh"
 fi
 
-# Max parallel jobs (default 4, configurable via BANG_MAX_PARALLEL)
-MAX_PARALLEL="${BANG_MAX_PARALLEL:-4}"
+# Max parallel jobs (default 4, configurable via UMWELT_MAX_PARALLEL)
+MAX_PARALLEL="${UMWELT_MAX_PARALLEL:-4}"
 
 # Global cleanup tracker
 TEMP_DIRS=()
@@ -60,12 +60,12 @@ parallel_run() {
   if [ "$count" -eq 0 ]; then return 0; fi
 
   # If parallel disabled or only 1 loader, run sequentially
-  if [ "$BANG_PARALLEL" != "1" ] || [ "$count" -eq 1 ]; then
+  if [ "$UMWELT_PARALLEL" != "1" ] || [ "$count" -eq 1 ]; then
     for entry in "${loaders[@]}"; do
       local loader_name loader_args
       loader_name=$(echo "$entry" | awk '{print $1}')
       loader_args=$(echo "$entry" | awk '{$1=""; print $0}' | sed 's/^ //')
-      local loader_path="$BANG_DIR/loaders/${loader_name}.sh"
+      local loader_path="$UMWELT_DIR/loaders/${loader_name}.sh"
       if [ -f "$loader_path" ]; then
         "$loader_path" $loader_args
         echo ""
@@ -77,7 +77,7 @@ parallel_run() {
   # Create temp dir for output collection with unique suffix including parent PID
   local parent_pid=$$
   local tmpdir
-  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/bang-parallel-${parent_pid}-XXXXXXXXXX")
+  tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/umwelt-parallel-${parent_pid}-XXXXXXXXXX")
   TEMP_DIRS+=("$tmpdir")
 
   # Set up signal traps for cleanup
@@ -96,7 +96,7 @@ parallel_run() {
     local loader_name loader_args
     loader_name=$(echo "$entry" | awk '{print $1}')
     loader_args=$(echo "$entry" | awk '{$1=""; print $0}' | sed 's/^ //')
-    local loader_path="$BANG_DIR/loaders/${loader_name}.sh"
+    local loader_path="$UMWELT_DIR/loaders/${loader_name}.sh"
 
     # Wait for available slot (file-based semaphore)
     while [ "$(ls -1 "$semaphore" 2>/dev/null | wc -l)" -ge "$MAX_PARALLEL" ]; do

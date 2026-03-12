@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Tests for Innovation 3: Smart PreCompact (bang-precompact.sh)
+# Tests for Innovation 3: Smart PreCompact (umwelt-precompact.sh)
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-export BANG_DIR
-export BANG_CACHE_DIR="${TMPDIR:-/tmp}/bang-test-cache-$$"
-mkdir -p "$BANG_CACHE_DIR"
+UMWELT_DIR="${UMWELT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+export UMWELT_DIR
+export UMWELT_CACHE_DIR="${TMPDIR:-/tmp}/bang-test-cache-$$"
+mkdir -p "$UMWELT_CACHE_DIR"
 
-STATE_FILE="$BANG_CACHE_DIR/precompact-state.json"
+STATE_FILE="$UMWELT_CACHE_DIR/precompact-state.json"
 
 # Colors
 RED='\033[0;31m'
@@ -132,7 +132,7 @@ echo ""
 # ─── Run precompact and capture output ───────────────────────
 echo "--- PreCompact Execution ---"
 
-OUTPUT=$(BANG_CACHE_DIR="$BANG_CACHE_DIR" "$BANG_DIR/bang-precompact.sh" 2>/dev/null) || true
+OUTPUT=$(UMWELT_CACHE_DIR="$UMWELT_CACHE_DIR" "$UMWELT_DIR/bang-precompact.sh" 2>/dev/null) || true
 
 assert_contains "output has start marker" "pre-compaction context snapshot" "$OUTPUT"
 assert_contains "output has end marker" "end pre-compaction snapshot" "$OUTPUT"
@@ -246,11 +246,11 @@ echo ""
 echo "--- reinject_precompact_state ---"
 
 # Source the precompact script to get the reinject function
-export BANG_CACHE_DIR
-source "$BANG_DIR/bang-precompact.sh" 2>/dev/null >/dev/null || true
+export UMWELT_CACHE_DIR
+source "$UMWELT_DIR/bang-precompact.sh" 2>/dev/null >/dev/null || true
 
 # The state file should exist at this point (from the run above... but we need to re-run)
-BANG_CACHE_DIR="$BANG_CACHE_DIR" "$BANG_DIR/bang-precompact.sh" >/dev/null 2>/dev/null || true
+UMWELT_CACHE_DIR="$UMWELT_CACHE_DIR" "$UMWELT_DIR/bang-precompact.sh" >/dev/null 2>/dev/null || true
 
 # Now test reinject
 REINJECT_OUTPUT=$(reinject_precompact_state 2>/dev/null) || true
@@ -282,7 +282,7 @@ echo ""
 echo "--- Output Compactness ---"
 
 # Re-run to get line count
-OUTPUT=$(BANG_CACHE_DIR="$BANG_CACHE_DIR" "$BANG_DIR/bang-precompact.sh" 2>/dev/null) || true
+OUTPUT=$(UMWELT_CACHE_DIR="$UMWELT_CACHE_DIR" "$UMWELT_DIR/bang-precompact.sh" 2>/dev/null) || true
 LINE_COUNT=$(echo "$OUTPUT" | wc -l | tr -d ' ')
 
 TOTAL=$((TOTAL + 1))
@@ -297,7 +297,7 @@ fi
 echo ""
 
 # ─── Cleanup ────────────────────────────────────────────────
-rm -rf "$BANG_CACHE_DIR"
+rm -rf "$UMWELT_CACHE_DIR"
 
 # ─── Summary ────────────────────────────────────────────────
 echo "════════════════════════════════════════"

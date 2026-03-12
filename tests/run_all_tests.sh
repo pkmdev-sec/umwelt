@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# bang-framework test runner
+# umwelt test runner
 # Runs all tests in TAP format
 set -euo pipefail
 
 cd "$(dirname "$0")"
-BANG_DIR="$(cd .. && pwd)"
+UMWELT_DIR="$(cd .. && pwd)"
 
 # TAP header
 echo "TAP version 13"

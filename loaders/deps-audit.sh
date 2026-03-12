@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# bang-framework: deps-audit loader
+# umwelt: deps-audit loader
 # Quick dependency health check — outdated, vulnerabilities, lock freshness
-# Usage: bang deps-audit [--full|--json]
+# Usage: umwelt deps-audit [--full|--json]
 set -euo pipefail
 
 # Source config and output systems
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-if [ -f "$BANG_DIR/lib/config.sh" ]; then
-  source "$BANG_DIR/lib/config.sh"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+if [ -f "$UMWELT_DIR/lib/config.sh" ]; then
+  source "$UMWELT_DIR/lib/config.sh"
 fi
-if [ -f "$BANG_DIR/lib/output.sh" ]; then
-  source "$BANG_DIR/lib/output.sh"
+if [ -f "$UMWELT_DIR/lib/output.sh" ]; then
+  source "$UMWELT_DIR/lib/output.sh"
 fi
 
 MODE="${1:-default}"
-OUTPUT_FMT="${BANG_OUTPUT_FORMAT:-text}"
+OUTPUT_FMT="${UMWELT_OUTPUT_FORMAT:-text}"
 for arg in "$@"; do
   if [ "$arg" = "--json" ]; then OUTPUT_FMT="json"; fi
 done

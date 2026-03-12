@@ -2,11 +2,11 @@
 # Tests for Innovation 2: Cache-Friendly Output
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_DIFF_CACHE_DIR=$(mktemp -d)
-export BANG_DIFF_CACHE_DIR
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_DIFF_CACHE_DIR=$(mktemp -d)
+export UMWELT_DIFF_CACHE_DIR
 
-source "$BANG_DIR/lib/cache-split.sh"
+source "$UMWELT_DIR/lib/cache-split.sh"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -73,11 +73,11 @@ assert_contains "stable has shell:" "shell:" "$stable"
 # Test 3: format_stable_context is cached on second call
 echo "Test: stable context is cached"
 # Clear and re-run
-rm -f "$BANG_DIFF_CACHE_DIR/stable-context.cache"
+rm -f "$UMWELT_DIFF_CACHE_DIR/stable-context.cache"
 first=$(format_stable_context)
 second=$(format_stable_context)
 assert "stable cached (same output)" "$first" "$second"
-assert "stable cache file exists" "true" "$([ -f "$BANG_DIFF_CACHE_DIR/stable-context.cache" ] && echo true || echo false)"
+assert "stable cache file exists" "true" "$([ -f "$UMWELT_DIFF_CACHE_DIR/stable-context.cache" ] && echo true || echo false)"
 
 # Test 4: format_volatile_context returns git or load info
 echo "Test: volatile context runs"
@@ -107,8 +107,8 @@ assert_contains "second call has volatile or unchanged" "(VOLATILE|unchanged)" "
 # Test 8: reset_cache_split clears state
 echo "Test: reset_cache_split"
 reset_cache_split
-assert "call count file removed" "false" "$([ -f "$BANG_DIFF_CACHE_DIR/call-count" ] && echo true || echo false)"
-assert "stable cache removed" "false" "$([ -f "$BANG_DIFF_CACHE_DIR/stable-context.cache" ] && echo true || echo false)"
+assert "call count file removed" "false" "$([ -f "$UMWELT_DIFF_CACHE_DIR/call-count" ] && echo true || echo false)"
+assert "stable cache removed" "false" "$([ -f "$UMWELT_DIFF_CACHE_DIR/stable-context.cache" ] && echo true || echo false)"
 
 # Test 9: After reset, first call includes STABLE again
 echo "Test: after reset, STABLE returns"
@@ -116,7 +116,7 @@ output3=$(format_cached_output)
 assert_contains "after reset has STABLE" "STABLE CONTEXT" "$output3"
 
 # Cleanup
-rm -rf "$BANG_DIFF_CACHE_DIR"
+rm -rf "$UMWELT_DIFF_CACHE_DIR"
 
 echo ""
 echo "════════════════════════════════════════"

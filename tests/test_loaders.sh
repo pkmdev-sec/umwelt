@@ -2,8 +2,8 @@
 # Comprehensive tests for all 7 loaders
 set -euo pipefail
 
-BANG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-LOADERS_DIR="$BANG_DIR/loaders"
+UMWELT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+LOADERS_DIR="$UMWELT_DIR/loaders"
 
 # ═══════════════════════════════════════════════════════════════════
 # LOADER 1: git-context
@@ -283,7 +283,7 @@ test_api_health_output_format() {
 
 test_api_health_handles_no_endpoints() {
   # Should handle when no API endpoints are configured
-  (unset BANG_API_ENDPOINTS && "$LOADERS_DIR/api-health.sh" 2>&1) || true
+  (unset UMWELT_API_ENDPOINTS && "$LOADERS_DIR/api-health.sh" 2>&1) || true
 }
 
 # ═══════════════════════════════════════════════════════════════════

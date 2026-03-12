@@ -1,10 +1,5 @@
 ![Umwelt Banner](assets/banner.svg)
 
-<p align="center">
-  <img src="assets/logo.svg" alt="UMWELT" width="200" height="200" />
-</p>
-
-<h1 align="center">UMWELT</h1>
 <p align="center"><strong>Environment intelligence for AI-assisted development.</strong></p>
 <p align="center">Scans your development environment — git, tests, Docker, APIs, dependencies — and injects structured context into AI sessions. Your AI sees what you see.</p>
 

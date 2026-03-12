@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bang-framework: Event-Optimized Loading (Innovation 4)
+# umwelt: Event-Optimized Loading (Innovation 4)
 # Routes hook events to optimal loader subsets instead of running everything.
 # Different events trigger different loading strategies based on what data
 # is likely stale or needed.
@@ -12,8 +12,8 @@
 #
 # Usage: source this file, then call route_event / should_rescan / get_trigger_loaders
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
 
 # Ensure cache dir exists
 mkdir -p "$CACHE_DIR"

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# bang-framework: Cost-Conscious Scanning (Innovation 6)
+# umwelt: Cost-Conscious Scanning (Innovation 6)
 # Tracks token cost of Bang injections per session with budget thresholds
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
-SESSION_COST_FILE="$BANG_CACHE_DIR/session-cost"
-SESSION_LOG_FILE="$BANG_CACHE_DIR/session-cost-log"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+SESSION_COST_FILE="$UMWELT_CACHE_DIR/session-cost"
+SESSION_LOG_FILE="$UMWELT_CACHE_DIR/session-cost-log"
 
 # Sonnet default pricing (per million tokens)
-PRICE_PER_M_INPUT="${BANG_PRICE_PER_M_INPUT:-3}"
-PRICE_PER_M_OUTPUT="${BANG_PRICE_PER_M_OUTPUT:-15}"
+PRICE_PER_M_INPUT="${UMWELT_PRICE_PER_M_INPUT:-3}"
+PRICE_PER_M_OUTPUT="${UMWELT_PRICE_PER_M_OUTPUT:-15}"
 
 # Cost thresholds (in dollars)
 THRESHOLD_FULL=0.10
@@ -51,7 +51,7 @@ estimate_injection_cost() {
 
 # ─── Session Cost Management ─────────────────────────────────
 _init_session_cost() {
-  mkdir -p "$BANG_CACHE_DIR"
+  mkdir -p "$UMWELT_CACHE_DIR"
   if [ ! -f "$SESSION_COST_FILE" ]; then
     echo "0.000000" > "$SESSION_COST_FILE"
   fi
@@ -83,7 +83,7 @@ add_session_cost() {
 
 # Reset session cost (e.g., on new session)
 reset_session_cost() {
-  mkdir -p "$BANG_CACHE_DIR"
+  mkdir -p "$UMWELT_CACHE_DIR"
   echo "0.000000" > "$SESSION_COST_FILE"
   : > "$SESSION_LOG_FILE"
 }

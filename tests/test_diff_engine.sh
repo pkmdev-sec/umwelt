@@ -2,11 +2,11 @@
 # Tests for Innovation 10: Diff-Based Injection Engine
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_DIFF_CACHE_DIR=$(mktemp -d)
-export BANG_DIFF_CACHE_DIR
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_DIFF_CACHE_DIR=$(mktemp -d)
+export UMWELT_DIFF_CACHE_DIR
 
-source "$BANG_DIR/lib/diff-engine.sh"
+source "$UMWELT_DIR/lib/diff-engine.sh"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -93,7 +93,7 @@ reset_cache
 assert_rc "after reset, has_cache returns 1" 1 has_cache "cache-test"
 
 # Cleanup
-rm -rf "$BANG_DIFF_CACHE_DIR"
+rm -rf "$UMWELT_DIFF_CACHE_DIR"
 
 echo ""
 echo "════════════════════════════════════════"

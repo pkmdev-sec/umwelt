@@ -2,13 +2,13 @@
 # Tests for Innovation 4: Event-Optimized Loading (event-router.sh)
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-export BANG_DIR
-export BANG_CACHE_DIR="${TMPDIR:-/tmp}/bang-test-cache-$$"
-mkdir -p "$BANG_CACHE_DIR"
+UMWELT_DIR="${UMWELT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+export UMWELT_DIR
+export UMWELT_CACHE_DIR="${TMPDIR:-/tmp}/bang-test-cache-$$"
+mkdir -p "$UMWELT_CACHE_DIR"
 
 # Source the module under test
-source "$BANG_DIR/lib/event-router.sh"
+source "$UMWELT_DIR/lib/event-router.sh"
 
 # Colors
 RED='\033[0;31m'
@@ -231,7 +231,7 @@ echo "--- record_loader_runs ---"
 
 record_loader_runs "git-context" "docker-status"
 TOTAL=$((TOTAL + 1))
-if [ -f "$BANG_CACHE_DIR/event-router-git-context-ts" ] && [ -f "$BANG_CACHE_DIR/event-router-docker-status-ts" ]; then
+if [ -f "$UMWELT_CACHE_DIR/event-router-git-context-ts" ] && [ -f "$UMWELT_CACHE_DIR/event-router-docker-status-ts" ]; then
   echo -e "  ${GREEN}PASS${NC} record_loader_runs creates timestamp files"
   PASSED=$((PASSED + 1))
 else
@@ -242,7 +242,7 @@ fi
 echo ""
 
 # ─── Cleanup ────────────────────────────────────────────────
-rm -rf "$BANG_CACHE_DIR"
+rm -rf "$UMWELT_CACHE_DIR"
 
 # ─── Summary ────────────────────────────────────────────────
 echo "════════════════════════════════════════"

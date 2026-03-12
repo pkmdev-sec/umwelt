@@ -2,11 +2,11 @@
 # Tests for Innovation 9: Predictive Context Loading (predictor.sh)
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-export BANG_DIR
+UMWELT_DIR="${UMWELT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+export UMWELT_DIR
 
 # Source the module under test
-source "$BANG_DIR/lib/predictor.sh"
+source "$UMWELT_DIR/lib/predictor.sh"
 
 # Colors
 RED='\033[0;31m'

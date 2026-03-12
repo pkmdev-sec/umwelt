@@ -2,12 +2,12 @@
 # Tests for Innovation 1: Token-Aware Profiling
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
-BANG_DIFF_CACHE_DIR=$(mktemp -d)
-export BANG_DIFF_CACHE_DIR
-export BANG_TOKEN_BUDGET=1000
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
+UMWELT_DIFF_CACHE_DIR=$(mktemp -d)
+export UMWELT_DIFF_CACHE_DIR
+export UMWELT_TOKEN_BUDGET=1000
 
-source "$BANG_DIR/lib/token-budget.sh"
+source "$UMWELT_DIR/lib/token-budget.sh"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -132,7 +132,7 @@ tokens=$(get_session_tokens)
 assert "after reset" "0" "$tokens"
 
 # Cleanup
-rm -rf "$BANG_DIFF_CACHE_DIR"
+rm -rf "$UMWELT_DIFF_CACHE_DIR"
 
 echo ""
 echo "════════════════════════════════════════"

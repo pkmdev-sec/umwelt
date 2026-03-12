@@ -1,43 +1,43 @@
 #!/usr/bin/env bash
-# bang-framework: Configuration system
+# umwelt: Configuration system
 # Merges defaults → global → workspace → project configs
-# Config files: ~/.claude/bang.conf, .bangrc, .bang/config
+# Config files: ~/.claude/umwelt.conf, .umweltrc, .umwelt/config
 set -euo pipefail
 
 # ─── Config Defaults ────────────────────────────────────────────
 # Every configurable value with its default
-BANG_CONFIG_LOADED="${BANG_CONFIG_LOADED:-0}"
+UMWELT_CONFIG_LOADED="${UMWELT_CONFIG_LOADED:-0}"
 
 # Scan/display limits
-BANG_SCAN_DEPTH="${BANG_SCAN_DEPTH:-4}"
-BANG_GIT_LOG_COUNT="${BANG_GIT_LOG_COUNT:-5}"
-BANG_DIFF_MAX_LINES="${BANG_DIFF_MAX_LINES:-100}"
-BANG_DOCKER_LOG_LINES="${BANG_DOCKER_LOG_LINES:-10}"
-BANG_HOOK_TIMEOUT="${BANG_HOOK_TIMEOUT:-30}"
+UMWELT_SCAN_DEPTH="${UMWELT_SCAN_DEPTH:-4}"
+UMWELT_GIT_LOG_COUNT="${UMWELT_GIT_LOG_COUNT:-5}"
+UMWELT_DIFF_MAX_LINES="${UMWELT_DIFF_MAX_LINES:-100}"
+UMWELT_DOCKER_LOG_LINES="${UMWELT_DOCKER_LOG_LINES:-10}"
+UMWELT_HOOK_TIMEOUT="${UMWELT_HOOK_TIMEOUT:-30}"
 
 # Output format: text (default) or json
-BANG_OUTPUT_FORMAT="${BANG_OUTPUT_FORMAT:-text}"
+UMWELT_OUTPUT_FORMAT="${UMWELT_OUTPUT_FORMAT:-text}"
 
 # Caching
-BANG_CACHE_ENABLED="${BANG_CACHE_ENABLED:-1}"
-BANG_CACHE_TTL="${BANG_CACHE_TTL:-300}"  # seconds (5 min default)
-BANG_CACHE_DIR="${BANG_CACHE_DIR:-$HOME/.claude/.bang-cache}"
+UMWELT_CACHE_ENABLED="${UMWELT_CACHE_ENABLED:-1}"
+UMWELT_CACHE_TTL="${UMWELT_CACHE_TTL:-300}"  # seconds (5 min default)
+UMWELT_CACHE_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}"
 
 # Parallel execution
-BANG_PARALLEL="${BANG_PARALLEL:-1}"
-BANG_PARALLEL_JOBS="${BANG_PARALLEL_JOBS:-4}"
+UMWELT_PARALLEL="${UMWELT_PARALLEL:-1}"
+UMWELT_PARALLEL_JOBS="${UMWELT_PARALLEL_JOBS:-4}"
 
 # File extensions for project-summary
-BANG_FILE_EXTENSIONS="${BANG_FILE_EXTENSIONS:-ts tsx js jsx py rs go swift java kt rb php css scss html md json yaml yml toml}"
+UMWELT_FILE_EXTENSIONS="${UMWELT_FILE_EXTENSIONS:-ts tsx js jsx py rs go swift java kt rb php css scss html md json yaml yml toml}"
 
 # Port scanning for api-health
-BANG_LOCAL_PORTS="${BANG_LOCAL_PORTS:-3000:dev-server 3001:dev-alt 4000:graphql 5000:flask 5173:vite 5432:postgres 6379:redis 8000:uvicorn 8080:proxy 8443:https-alt 9090:prometheus 27017:mongodb}"
+UMWELT_LOCAL_PORTS="${UMWELT_LOCAL_PORTS:-3000:dev-server 3001:dev-alt 4000:graphql 5000:flask 5173:vite 5432:postgres 6379:redis 8000:uvicorn 8080:proxy 8443:https-alt 9090:prometheus 27017:mongodb}"
 
 # Exclude patterns for find operations
-BANG_EXCLUDE_DIRS="${BANG_EXCLUDE_DIRS:-node_modules .git dist build .next .nuxt target __pycache__ .pytest_cache coverage .mypy_cache Library}"
+UMWELT_EXCLUDE_DIRS="${UMWELT_EXCLUDE_DIRS:-node_modules .git dist build .next .nuxt target __pycache__ .pytest_cache coverage .mypy_cache Library}"
 
 # ─── Config File Parser ─────────────────────────────────────────
-# Parse a .bangrc or bang.conf file (KEY=VALUE format, # comments)
+# Parse a .umweltrc or umwelt.conf file (KEY=VALUE format, # comments)
 parse_config_file() {
   local file="$1"
   if [ ! -f "$file" ]; then return 0; fi
@@ -52,9 +52,9 @@ parse_config_file() {
     key=$(echo "$line" | cut -d'=' -f1 | tr -d ' ')
     value=$(echo "$line" | cut -d'=' -f2- | sed 's/^[[:space:]]*//' | sed 's/^"//' | sed 's/"$//' | sed "s/^'//" | sed "s/'$//")
 
-    # Only set BANG_* variables (safety)
+    # Only set UMWELT_* variables (safety)
     case "$key" in
-      BANG_*)
+      UMWELT_*)
         export "$key=$value"
         ;;
     esac
@@ -63,25 +63,25 @@ parse_config_file() {
 
 # ─── Load Configuration (merge order) ──────────────────────────
 load_config() {
-  if [ "$BANG_CONFIG_LOADED" = "1" ]; then return 0; fi
+  if [ "$UMWELT_CONFIG_LOADED" = "1" ]; then return 0; fi
 
   # 1. Defaults (already set above)
 
   # 2. Global config
-  parse_config_file "$HOME/.claude/bang.conf"
+  parse_config_file "$HOME/.claude/umwelt.conf"
 
   # 3. Workspace config (if in a .claude workspace)
-  local workspace_config="$HOME/.claude/bang-framework/.bangrc"
+  local workspace_config="$HOME/.claude/umwelt/.umweltrc"
   parse_config_file "$workspace_config"
 
   # 4. Project config (walk up from CWD)
   local dir="$PWD"
   while [ "$dir" != "/" ]; do
-    if [ -f "$dir/.bangrc" ]; then
-      parse_config_file "$dir/.bangrc"
+    if [ -f "$dir/.umweltrc" ]; then
+      parse_config_file "$dir/.umweltrc"
       break
-    elif [ -f "$dir/.bang/config" ]; then
-      parse_config_file "$dir/.bang/config"
+    elif [ -f "$dir/.umwelt/config" ]; then
+      parse_config_file "$dir/.umwelt/config"
       break
     fi
     dir=$(dirname "$dir")
@@ -90,19 +90,19 @@ load_config() {
   # 5. Environment variables override everything (already in effect)
 
   # Build exclude pattern for find
-  BANG_FIND_EXCLUDE=""
-  for d in $BANG_EXCLUDE_DIRS; do
-    BANG_FIND_EXCLUDE="$BANG_FIND_EXCLUDE -not -path '*/${d}/*'"
+  UMWELT_FIND_EXCLUDE=""
+  for d in $UMWELT_EXCLUDE_DIRS; do
+    UMWELT_FIND_EXCLUDE="$UMWELT_FIND_EXCLUDE -not -path '*/${d}/*'"
   done
-  export BANG_FIND_EXCLUDE
+  export UMWELT_FIND_EXCLUDE
 
-  export BANG_CONFIG_LOADED=1
+  export UMWELT_CONFIG_LOADED=1
 }
 
 # ─── Cache System ───────────────────────────────────────────────
 cache_init() {
-  if [ "$BANG_CACHE_ENABLED" != "1" ]; then return 0; fi
-  mkdir -p "$BANG_CACHE_DIR"
+  if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 0; fi
+  mkdir -p "$UMWELT_CACHE_DIR"
 }
 
 # Generate a cache key from loader name + arguments + project context
@@ -117,10 +117,10 @@ cache_key() {
 
 # Get cached result (returns 1 if miss or expired)
 cache_get() {
-  if [ "$BANG_CACHE_ENABLED" != "1" ]; then return 1; fi
+  if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 1; fi
 
   local key="$1"
-  local cache_file="$BANG_CACHE_DIR/$key"
+  local cache_file="$UMWELT_CACHE_DIR/$key"
 
   if [ ! -f "$cache_file" ]; then return 1; fi
 
@@ -136,7 +136,7 @@ cache_get() {
   fi
 
   local age=$((now - file_age))
-  if [ "$age" -gt "$BANG_CACHE_TTL" ]; then
+  if [ "$age" -gt "$UMWELT_CACHE_TTL" ]; then
     rm -f "$cache_file"
     return 1
   fi
@@ -147,11 +147,11 @@ cache_get() {
 
 # Store result in cache
 cache_set() {
-  if [ "$BANG_CACHE_ENABLED" != "1" ]; then return 0; fi
+  if [ "$UMWELT_CACHE_ENABLED" != "1" ]; then return 0; fi
 
   local key="$1"
   local value="$2"
-  local cache_file="$BANG_CACHE_DIR/$key"
+  local cache_file="$UMWELT_CACHE_DIR/$key"
 
   echo "$value" > "$cache_file"
 }
@@ -159,12 +159,12 @@ cache_set() {
 # Invalidate cache for a loader
 cache_invalidate() {
   local loader="$1"
-  rm -f "$BANG_CACHE_DIR/${loader}_"* 2>/dev/null || true
+  rm -f "$UMWELT_CACHE_DIR/${loader}_"* 2>/dev/null || true
 }
 
 # Clear all cache
 cache_clear() {
-  rm -rf "${BANG_CACHE_DIR:?}"/* 2>/dev/null || true
+  rm -rf "${UMWELT_CACHE_DIR:?}"/* 2>/dev/null || true
 }
 
 # ─── jq Availability Check ──────────────────────────────────────
@@ -242,42 +242,42 @@ json_kva() {
 # ─── Show Config ────────────────────────────────────────────────
 show_config() {
   load_config
-  echo "bang-framework configuration"
+  echo "umwelt configuration"
   echo "════════════════════════════════════════"
   echo ""
   echo "Scan/Display:"
-  echo "  BANG_SCAN_DEPTH=$BANG_SCAN_DEPTH"
-  echo "  BANG_GIT_LOG_COUNT=$BANG_GIT_LOG_COUNT"
-  echo "  BANG_DIFF_MAX_LINES=$BANG_DIFF_MAX_LINES"
-  echo "  BANG_DOCKER_LOG_LINES=$BANG_DOCKER_LOG_LINES"
-  echo "  BANG_HOOK_TIMEOUT=$BANG_HOOK_TIMEOUT"
+  echo "  UMWELT_SCAN_DEPTH=$UMWELT_SCAN_DEPTH"
+  echo "  UMWELT_GIT_LOG_COUNT=$UMWELT_GIT_LOG_COUNT"
+  echo "  UMWELT_DIFF_MAX_LINES=$UMWELT_DIFF_MAX_LINES"
+  echo "  UMWELT_DOCKER_LOG_LINES=$UMWELT_DOCKER_LOG_LINES"
+  echo "  UMWELT_HOOK_TIMEOUT=$UMWELT_HOOK_TIMEOUT"
   echo ""
   echo "Output:"
-  echo "  BANG_OUTPUT_FORMAT=$BANG_OUTPUT_FORMAT"
+  echo "  UMWELT_OUTPUT_FORMAT=$UMWELT_OUTPUT_FORMAT"
   echo ""
   echo "Cache:"
-  echo "  BANG_CACHE_ENABLED=$BANG_CACHE_ENABLED"
-  echo "  BANG_CACHE_TTL=${BANG_CACHE_TTL}s"
-  echo "  BANG_CACHE_DIR=$BANG_CACHE_DIR"
+  echo "  UMWELT_CACHE_ENABLED=$UMWELT_CACHE_ENABLED"
+  echo "  UMWELT_CACHE_TTL=${UMWELT_CACHE_TTL}s"
+  echo "  UMWELT_CACHE_DIR=$UMWELT_CACHE_DIR"
   echo ""
   echo "Parallel:"
-  echo "  BANG_PARALLEL=$BANG_PARALLEL"
-  echo "  BANG_PARALLEL_JOBS=$BANG_PARALLEL_JOBS"
+  echo "  UMWELT_PARALLEL=$UMWELT_PARALLEL"
+  echo "  UMWELT_PARALLEL_JOBS=$UMWELT_PARALLEL_JOBS"
   echo ""
   echo "Config files loaded (in order):"
   echo "  1. defaults (built-in)"
-  [ -f "$HOME/.claude/bang.conf" ] && echo "  2. $HOME/.claude/bang.conf" || echo "  2. $HOME/.claude/bang.conf (not found)"
-  [ -f "$HOME/.claude/bang-framework/.bangrc" ] && echo "  3. $HOME/.claude/bang-framework/.bangrc" || echo "  3. workspace .bangrc (not found)"
+  [ -f "$HOME/.claude/umwelt.conf" ] && echo "  2. $HOME/.claude/umwelt.conf" || echo "  2. $HOME/.claude/umwelt.conf (not found)"
+  [ -f "$HOME/.claude/umwelt/.umweltrc" ] && echo "  3. $HOME/.claude/umwelt/.umweltrc" || echo "  3. workspace .umweltrc (not found)"
 
   local dir="$PWD"
   local found_project=0
   while [ "$dir" != "/" ]; do
-    if [ -f "$dir/.bangrc" ]; then
-      echo "  4. $dir/.bangrc"
+    if [ -f "$dir/.umweltrc" ]; then
+      echo "  4. $dir/.umweltrc"
       found_project=1
       break
-    elif [ -f "$dir/.bang/config" ]; then
-      echo "  4. $dir/.bang/config"
+    elif [ -f "$dir/.umwelt/config" ]; then
+      echo "  4. $dir/.umwelt/config"
       found_project=1
       break
     fi

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# bang-framework profile: debug
+# umwelt profile: debug
 # Debugging context — full env, docker logs, API health, recent errors
-# Usage: bang profile debug
+# Usage: umwelt profile debug
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
 echo "╔══════════════════════════════════════╗"
 echo "║     BANG PROFILE: DEBUG              ║"
@@ -12,19 +12,19 @@ echo "╚═══════════════════════�
 echo ""
 
 # Full environment
-"$BANG_DIR/loaders/env-summary.sh" "--full"
+"$UMWELT_DIR/loaders/env-summary.sh" "--full"
 echo ""
 
 # Git state
-"$BANG_DIR/loaders/git-context.sh" "--minimal"
+"$UMWELT_DIR/loaders/git-context.sh" "--minimal"
 echo ""
 
 # Docker with logs
-"$BANG_DIR/loaders/docker-status.sh" "--full"
+"$UMWELT_DIR/loaders/docker-status.sh" "--full"
 echo ""
 
 # API health
-"$BANG_DIR/loaders/api-health.sh" "--full"
+"$UMWELT_DIR/loaders/api-health.sh" "--full"
 echo ""
 
 # Recent errors in common log locations

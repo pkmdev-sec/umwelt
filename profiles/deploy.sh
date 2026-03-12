@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# bang-framework profile: deploy
+# umwelt profile: deploy
 # Pre-deployment checklist — git clean, tests, deps, docker, APIs
-# Usage: bang profile deploy
+# Usage: umwelt profile deploy
 set -euo pipefail
 
-BANG_DIR="${BANG_DIR:-$HOME/.claude/bang-framework}"
+UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
 echo "╔══════════════════════════════════════╗"
 echo "║     BANG PROFILE: DEPLOY CHECK       ║"
@@ -49,15 +49,15 @@ fi
 
 # 2. Dependencies
 echo ""
-"$BANG_DIR/loaders/deps-audit.sh"
+"$UMWELT_DIR/loaders/deps-audit.sh"
 
 # 3. Docker
 echo ""
-"$BANG_DIR/loaders/docker-status.sh" "--minimal"
+"$UMWELT_DIR/loaders/docker-status.sh" "--minimal"
 
 # 4. APIs
 echo ""
-"$BANG_DIR/loaders/api-health.sh"
+"$UMWELT_DIR/loaders/api-health.sh"
 
 # 5. Build check
 echo ""

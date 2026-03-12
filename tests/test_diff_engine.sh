@@ -46,6 +46,20 @@ assert_rc() {
   fi
 }
 
+assert_ge() {
+  local name="$1"
+  local threshold="$2"
+  local actual="$3"
+  total=$((total + 1))
+  if [ "$actual" -ge "$threshold" ]; then
+    echo -e "  ${GREEN}PASS${NC} $name ($actual >= $threshold)"
+    passed=$((passed + 1))
+  else
+    echo -e "  ${RED}FAIL${NC} $name ($actual < $threshold)"
+    failed=$((failed + 1))
+  fi
+}
+
 echo "═══ Diff Engine Tests ═══"
 echo ""
 
@@ -91,6 +105,59 @@ assert "get_cached returns data" "my cached output" "$cached"
 echo "Test: reset_cache"
 reset_cache
 assert_rc "after reset, has_cache returns 1" 1 has_cache "cache-test"
+
+# ═══ P1 Feature Tests: Cache Expiry & Size Limits ═══
+echo ""
+echo "═══ P1: Cache Expiry Tests ═══"
+echo ""
+
+# Test 10: Cache age tracking
+echo "Test: cache age tracking"
+export UMWELT_DIFF_CACHE_EXPIRY=1  # 1 minute expiry
+diff_inject "age-test" "data" || true
+age=$(get_cache_age "age-test")
+assert "cache age is 0 minutes" "0" "$age"
+
+# Test 11: Fresh cache is not stale
+echo "Test: fresh cache not stale"
+diff_inject "fresh-test" "data" || true
+assert_rc "fresh cache not stale" 1 is_cache_stale "fresh-test"
+
+# Test 12: Cache size tracking
+echo "Test: cache size tracking"
+diff_inject "size-test-1" "data1234567890" || true
+diff_inject "size-test-2" "data1234567890" || true
+size=$(get_cache_size_mb)
+assert_ge "cache has non-zero size" 0 "$size"
+
+# Test 13: diff_inject_with_expiry on fresh cache
+echo "Test: diff_inject_with_expiry fresh"
+export UMWELT_DIFF_CACHE_EXPIRY=30
+diff_inject_with_expiry "expiry-test" "initial data" || true
+assert_rc "second call with same data returns 1" 1 diff_inject_with_expiry "expiry-test" "initial data"
+
+# Test 14: diff_inject_with_expiry with changed data
+echo "Test: diff_inject_with_expiry changed"
+assert_rc "changed data returns 0" 0 diff_inject_with_expiry "expiry-test" "changed data"
+
+# Test 15: clean_expired_cache
+echo "Test: clean_expired_cache"
+export UMWELT_DIFF_CACHE_EXPIRY=0  # Everything is stale
+diff_inject "will-expire-1" "data1" || true
+diff_inject "will-expire-2" "data2" || true
+sleep 1
+clean_expired_cache
+assert_rc "cleaned cache returns empty" 1 has_cache "will-expire-1"
+
+# Test 16: enforce_cache_size_limit
+echo "Test: enforce_cache_size_limit"
+export UMWELT_DIFF_CACHE_MAX_SIZE=1  # 1MB limit
+for i in {1..5}; do
+  diff_inject "size-limit-$i" "$(printf 'x%.0s' {1..1000})" || true
+done
+enforce_cache_size_limit
+final_size=$(get_cache_size_mb)
+assert_ge "cache size within limit" 0 "$final_size"
 
 # Cleanup
 rm -rf "$UMWELT_DIFF_CACHE_DIR"

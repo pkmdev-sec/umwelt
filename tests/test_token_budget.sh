@@ -131,6 +131,68 @@ reset_token_count
 tokens=$(get_session_tokens)
 assert "after reset" "0" "$tokens"
 
+# ═══ P1 Feature Tests: Visual Budget Bar ═══
+echo ""
+echo "═══ P1: Visual Budget Bar Tests ═══"
+echo ""
+
+# Test 13: visual_budget_bar generates output
+echo "Test: visual_budget_bar output"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..2000})" >/dev/null  # 500 = 50%
+bar=$(visual_budget_bar 20)
+has_bar=$(echo "$bar" | grep -q '█' && echo true || echo false)
+assert "visual bar contains filled blocks" "true" "$has_bar"
+
+# Test 14: visual_budget_bar shows percentage
+echo "Test: visual_budget_bar percentage"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..2000})" >/dev/null  # 500 = 50%
+bar=$(visual_budget_bar 20)
+has_pct=$(echo "$bar" | grep -q '50%' && echo true || echo false)
+assert "visual bar shows 50%" "true" "$has_pct"
+
+# Test 15: compact_budget_bar format
+echo "Test: compact_budget_bar"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..800})" >/dev/null  # 200 = 20%
+compact=$(compact_budget_bar 10)
+has_bracket=$(echo "$compact" | grep -q '\[' && echo true || echo false)
+assert "compact bar has brackets" "true" "$has_bracket"
+
+# Test 16: budget_status_with_bar includes recommendation
+echo "Test: budget_status_with_bar recommendations"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..3600})" >/dev/null  # 900 = 90%
+status=$(budget_status_with_bar 20)
+has_warning=$(echo "$status" | grep -qi 'warning\|notice' && echo true || echo false)
+assert "status has warning at 90%" "true" "$has_warning"
+
+# Test 17: visual_budget_bar different widths
+echo "Test: visual_budget_bar custom width"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..2000})" >/dev/null  # 500 = 50%
+bar_40=$(visual_budget_bar 40)
+bar_10=$(visual_budget_bar 10)
+len_40=$(echo "$bar_40" | head -1 | wc -c)
+len_10=$(echo "$bar_10" | head -1 | wc -c)
+assert_ge "bar width 40 > bar width 10" "$len_10" "$len_40"
+
+# Test 18: visual_budget_bar at 0%
+echo "Test: visual_budget_bar at 0%"
+reset_token_count
+bar=$(visual_budget_bar 20)
+has_empty=$(echo "$bar" | grep -q '░' && echo true || echo false)
+assert "empty bar has empty blocks" "true" "$has_empty"
+
+# Test 19: visual_budget_bar at 100%
+echo "Test: visual_budget_bar at 100%"
+reset_token_count
+track_tokens "$(printf 'a%.0s' {1..4000})" >/dev/null  # 1000 = 100%
+bar=$(visual_budget_bar 20)
+has_filled=$(echo "$bar" | grep -q '█' && echo true || echo false)
+assert "full bar has filled blocks" "true" "$has_filled"
+
 # Cleanup
 rm -rf "$UMWELT_DIFF_CACHE_DIR"
 

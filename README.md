@@ -351,6 +351,17 @@ umwelt unified UserPromptSubmit "fix the tests"   # Event-aware + message-aware
 
 ### Custom Loaders
 
+Loaders are bash scripts that output structured context. They are the building blocks of Umwelt's intelligence system.
+
+**Loader API contract:**
+- Must be executable bash scripts (.sh extension)
+- Fast execution (< 2 seconds recommended)
+- Output structured text (use headers like `=== SECTION ===`)
+- Clean exit with `exit 0`
+- Support for `--json` flag (optional)
+
+**Minimal example:**
+
 ```bash
 #!/usr/bin/env bash
 # umwelt: my-custom-loader
@@ -361,9 +372,25 @@ echo "=== MY CUSTOM CONTEXT ==="
 echo "=== END MY CUSTOM CONTEXT ==="
 ```
 
-Save to `~/.claude/umwelt/loaders/my-custom-loader.sh`, make executable, use: `umwelt my-custom-loader`
+**Full example with best practices:**
+
+See [examples/custom-loader.sh](examples/custom-loader.sh) for a complete example that demonstrates:
+- TODO counting across codebase
+- Code coverage reporting
+- Security vulnerability detection
+- Team conventions detection
+
+**Installation:**
+1. Save to `~/.claude/umwelt/loaders/my-custom-loader.sh`
+2. Make executable: `chmod +x ~/.claude/umwelt/loaders/my-custom-loader.sh`
+3. Use directly: `umwelt my-custom-loader`
+4. Or compose: `umwelt compose git-context my-custom-loader`
 
 ### Custom Profiles
+
+Profiles orchestrate which loaders run and in what order. They enable task-specific context configurations.
+
+**Minimal example:**
 
 ```bash
 #!/usr/bin/env bash
@@ -374,7 +401,105 @@ UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 "$UMWELT_DIR/loaders/my-custom-loader.sh"
 ```
 
-Save to `~/.claude/umwelt/profiles/my-workflow.sh`, make executable, use: `umwelt profile my-workflow`
+**Advanced example with parallel execution:**
+
+See [examples/custom-profile.sh](examples/custom-profile.sh) for a complete example that demonstrates:
+- Sequential vs parallel loader execution
+- Custom environment variable configuration
+- Profile metadata and descriptions
+- Integration with the parallel execution engine
+
+**Installation:**
+1. Save to `~/.claude/umwelt/profiles/my-workflow.sh`
+2. Make executable: `chmod +x ~/.claude/umwelt/profiles/my-workflow.sh`
+3. Use with: `umwelt profile my-workflow`
+
+**Available loaders for composition:**
+- `git-context` — Git state, branch, commits, diffs
+- `test-status` — Test framework detection and results
+- `env-summary` — Shell, runtimes, environment variables
+- `docker-status` — Container status, compose services
+- `deps-audit` — Dependency health and vulnerabilities
+- `project-summary` — Project structure and tech stack
+- `api-health` — Local service and API endpoint health
+
+## Examples
+
+The `examples/` directory contains fully-documented example scripts:
+
+### Custom Loader Example
+
+[examples/custom-loader.sh](examples/custom-loader.sh) — A comprehensive example loader that demonstrates:
+- Scanning codebase for TODOs
+- Reading code coverage reports
+- Checking for security vulnerabilities with npm audit
+- Detecting team conventions (.editorconfig, .prettierrc, .eslintrc)
+
+**Use it as a starting point:**
+```bash
+# Copy and customize
+cp ~/.claude/umwelt/examples/custom-loader.sh ~/.claude/umwelt/loaders/team-metrics.sh
+# Edit to add your team's specific metrics
+vim ~/.claude/umwelt/loaders/team-metrics.sh
+# Use it
+umwelt team-metrics
+```
+
+### Custom Profile Example
+
+[examples/custom-profile.sh](examples/custom-profile.sh) — A comprehensive example profile that demonstrates:
+- Sequential loader execution (simple approach)
+- Parallel loader execution (advanced approach)
+- Custom environment variables and configuration
+- Profile metadata and documentation
+
+**Use it as a template:**
+```bash
+# Copy and customize
+cp ~/.claude/umwelt/examples/custom-profile.sh ~/.claude/umwelt/profiles/fullstack.sh
+# Edit to select your preferred loaders
+vim ~/.claude/umwelt/profiles/fullstack.sh
+# Use it
+umwelt profile fullstack
+```
+
+### Loader Customization Guide
+
+**When to create a custom loader:**
+- Your team has specific metrics or checks
+- You need to integrate with proprietary tools
+- You want to expose project-specific context (microservices status, feature flags, etc.)
+
+**Best practices:**
+1. **Keep it fast** — Loaders should run in < 2 seconds
+2. **Be concise** — Output 10-50 lines max to stay within token budgets
+3. **Use caching** — For expensive operations, cache results with TTL
+4. **Handle errors gracefully** — Always exit cleanly, even on failures
+5. **Follow conventions** — Use `=== SECTION ===` headers for structure
+
+**Loader output format:**
+```bash
+echo "=== SECTION NAME ==="
+echo "key: value"
+echo "another-key: another-value"
+echo ""
+echo "--- Subsection ---"
+echo "  item 1"
+echo "  item 2"
+echo "=== END SECTION NAME ==="
+```
+
+**Testing your loader:**
+```bash
+# Test output
+~/.claude/umwelt/loaders/my-loader.sh
+
+# Test with Bang syntax
+!`umwelt my-loader` What do you see in the context?
+
+# Test timing
+time ~/.claude/umwelt/loaders/my-loader.sh
+```
 
 ## API Reference
 

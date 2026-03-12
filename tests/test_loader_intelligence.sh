@@ -136,6 +136,92 @@ total=$(estimate_total_loader_tokens "env-summary" "git-context")
 assert_match "total estimate is numeric" '^[0-9]+$' "$total"
 assert_nonzero "total estimate is nonzero" "$total"
 
+# ═══ P1 Feature Tests: Loader Performance Timing ═══
+echo ""
+echo "═══ P1: Loader Performance Timing Tests ═══"
+
+# Setup temp timing dir
+export UMWELT_LOADER_TIMING_DIR=$(mktemp -d)
+export UMWELT_LOADER_TIMEOUT=2
+export UMWELT_LOADER_SLOW_THRESHOLD=1
+
+# Test 19: record_loader_timing stores timing data
+record_loader_timing "test-loader" 500
+TIMING_FILE="$UMWELT_LOADER_TIMING_DIR/test-loader.times"
+if [ -f "$TIMING_FILE" ]; then
+  echo "ok - record_loader_timing creates timing file"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - timing file should exist"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 20: get_loader_avg_time calculates average
+record_loader_timing "avg-test" 1000
+record_loader_timing "avg-test" 2000
+record_loader_timing "avg-test" 3000
+avg=$(get_loader_avg_time "avg-test")
+assert_eq "average of 1000,2000,3000 is 2000" "2000" "$avg"
+
+# Test 21: is_loader_slow detects slow loaders
+record_loader_timing "slow-loader" 2500  # 2.5s > 1s threshold
+if is_loader_slow "slow-loader"; then
+  echo "ok - is_loader_slow detects slow loader"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - should detect slow loader"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 22: is_loader_slow detects fast loaders
+record_loader_timing "fast-loader" 100
+if ! is_loader_slow "fast-loader"; then
+  echo "ok - is_loader_slow correctly identifies fast loader"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - should not mark fast loader as slow"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 23: filter_slow_loaders removes slow ones
+loaders="fast-loader slow-loader"
+filtered=$(filter_slow_loaders "$loaders")
+assert_match "filtered has fast-loader" "fast-loader" "$filtered"
+if ! echo "$filtered" | grep -q "slow-loader"; then
+  echo "ok - filter_slow_loaders removes slow-loader"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - should filter out slow-loader"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 24: get_loader_timing_report generates output
+record_loader_timing "report-test" 1500
+report=$(get_loader_timing_report)
+if echo "$report" | grep -q "Loader Performance Report"; then
+  echo "ok - get_loader_timing_report generates report"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - report should have header"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 25: timing file keeps last 10 entries (rolling window)
+for i in {1..15}; do
+  record_loader_timing "rolling-test" $((i * 100))
+done
+count=$(wc -l < "$UMWELT_LOADER_TIMING_DIR/rolling-test.times" | tr -d ' ')
+if [ "$count" -le 10 ]; then
+  echo "ok - timing file keeps max 10 entries"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - timing file should have <=10 entries (has $count)"
+  FAILED=$((FAILED + 1))
+fi
+
+# Cleanup
+rm -rf "$UMWELT_LOADER_TIMING_DIR"
+
 echo ""
 echo "# Results: $PASSED passed, $FAILED failed"
 [ "$FAILED" -eq 0 ] || exit 1

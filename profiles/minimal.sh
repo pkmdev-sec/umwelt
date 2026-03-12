@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# umwelt profile: minimal
-# Ultra-lightweight context — cwd + git branch only
-# Target: <200 tokens per injection
-# Designed for haiku-class models where every token counts
+# ============================================================================
+# minimal.sh — Minimal profile
+# ============================================================================
+# Purpose: Ultra-lightweight context injection with only essential info:
+#          current working directory and git branch. Target: <200 tokens.
+#          Designed for Haiku-class models or high-budget situations.
+#
 # Usage: umwelt profile minimal
+#
+# Dependencies: bash 3.2+, git (optional)
+#
+# Output: Current working directory path and git branch (if in a git repo).
+#         Extremely fast, no loader dependencies, minimal token footprint.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

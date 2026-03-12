@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt profile: deploy
-# Pre-deployment checklist — git clean, tests, deps, docker, APIs
+# ============================================================================
+# deploy.sh — Pre-deployment checklist profile
+# ============================================================================
+# Purpose: Comprehensive deployment readiness check covering git cleanliness,
+#          remote sync, dependency health, Docker status, API availability,
+#          and build artifacts. Outputs READY/NOT READY verdict.
+#
 # Usage: umwelt profile deploy
+#
+# Dependencies: bash 3.2+, git, deps-audit, docker-status, api-health loaders,
+#               jq/python3 for package.json parsing
+#
+# Output: Checklist with ✓/✗ marks for each requirement: clean working tree,
+#         in sync with remote, dependencies audited, Docker running, APIs up,
+#         build artifacts present. Final verdict at end.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

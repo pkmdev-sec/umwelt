@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
-# umwelt: test-status loader
-# Detects test framework and reports last test results or runs quick tests
-# Usage: umwelt test-status [--run|--last|--coverage|--json]
+# ============================================================================
+# test-status.sh — Test status loader
+# ============================================================================
+# Purpose: Detects test framework (Jest, Vitest, pytest, Cargo, Go, etc.)
+#          and reports last test results or runs quick tests on demand.
+#
+# Usage: umwelt test-status [--run|--last|--coverage] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/test-status.sh
+#
+# Dependencies: bash 3.2+, package.json/Cargo.toml/go.mod/pytest (framework detection)
+#
+# Output: Test framework detection, last run results (pass/fail/skip counts),
+#         coverage percentage if available, or runs tests and reports results.
+#         Returns "[test-status] No test framework detected" if none found.
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

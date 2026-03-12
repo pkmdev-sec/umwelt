@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
-# umwelt: docker-status loader
-# Reports Docker container status, compose services, images
-# Usage: umwelt docker-status [--full|--minimal|--json]
+# ============================================================================
+# docker-status.sh — Docker status loader
+# ============================================================================
+# Purpose: Reports running Docker containers, compose services, images, and
+#          optionally container logs. Detects if Docker is installed/running.
+#
+# Usage: umwelt docker-status [--full|--minimal] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/docker-status.sh
+#
+# Dependencies: bash 3.2+, docker, docker-compose (optional)
+#
+# Output: Running container count, container names/status, compose services,
+#         image list, and recent logs (if --full). Returns "[docker] Not
+#         installed" or "[docker] Not running" if unavailable.
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt: env-summary loader
-# Outputs environment info — shell, runtimes, key env vars, disk/memory
-# Usage: umwelt env-summary [--full|--minimal|--json]
+# ============================================================================
+# env-summary.sh — Environment summary loader
+# ============================================================================
+# Purpose: Outputs stable environment information including OS, shell version,
+#          installed runtimes (Node, Python, Go, Rust, etc.), key environment
+#          variables, disk/memory usage, and active processes.
+#
+# Usage: umwelt env-summary [--full|--minimal] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/env-summary.sh
+#
+# Dependencies: bash 3.2+, node/python3/go/rustc (optional for version detection)
+#
+# Output: OS info, shell/bash version, runtime versions, memory/disk stats,
+#         and optionally detailed environment variables. Minimal mode outputs
+#         only core system info. Full mode includes resource usage and envvars.
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

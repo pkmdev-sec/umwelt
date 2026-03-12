@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt profile: debug
-# Debugging context — full env, docker logs, API health, recent errors
+# ============================================================================
+# debug.sh — Debugging profile
+# ============================================================================
+# Purpose: Comprehensive debugging context including full environment details,
+#          Docker logs, API health, recent error logs, and process info.
+#          Designed for troubleshooting production issues.
+#
 # Usage: umwelt profile debug
+#
+# Dependencies: bash 3.2+, env-summary, git-context, docker-status,
+#               api-health loaders, grep for log parsing, ps for processes
+#
+# Output: Full env vars, git state, Docker logs, API health, recent errors
+#         from npm-debug.log and *.log files, system log excerpts (macOS),
+#         and top 5 CPU/memory processes.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

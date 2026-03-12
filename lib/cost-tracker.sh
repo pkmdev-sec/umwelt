@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# umwelt: Cost-Conscious Scanning (Innovation 6)
-# Tracks token cost of Bang injections per session with budget thresholds
+# ============================================================================
+# cost-tracker.sh — Cost-conscious scanning (Innovation 6)
+# ============================================================================
+# Purpose: Tracks cumulative token cost of context injections per session.
+#          Auto-reduces scanning intensity when cost thresholds are hit.
+#          Prevents runaway API costs from repeated injections.
+#
+# Usage: source lib/cost-tracker.sh
+#        Call: estimate_injection_cost "$text", track_injection "$text",
+#              get_cost_profile, should_inject, get_allowed_loaders
+#
+# Dependencies: bash 3.2+, awk for floating-point math
+#
+# Output: Cost estimates in dollars, budget status, loader allowlist per
+#         cost profile (full/reduced/minimal/silent). Thresholds: $0.10
+#         full→reduced, $0.25 reduced→minimal, $0.50 minimal→silent.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

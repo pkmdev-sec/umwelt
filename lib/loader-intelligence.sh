@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
-# umwelt: Intelligent Loaders (Innovation 7)
-# Smart loader selection — skip irrelevant loaders, estimate tokens, format output
+# ============================================================================
+# loader-intelligence.sh — Intelligent loaders (Innovation 7)
+# ============================================================================
+# Purpose: Smart loader selection, relevance detection, token estimation,
+#          output formatting, and performance timing. Skips loaders that
+#          would produce no useful output (e.g., docker-status if Docker
+#          isn't running). Tracks execution time to identify slow loaders.
+#
+# Usage: source lib/loader-intelligence.sh
+#        Call: is_loader_relevant "loader_name", estimate_loader_tokens "name",
+#              format_loader_output "name" "$raw", run_relevant_loaders [msg],
+#              get_loader_timing_report, is_loader_slow "name"
+#
+# Dependencies: bash 3.2+, docker/git/nc (optional, for relevance checks)
+#
+# Output: Relevance checks return 0 (relevant) or 1 (skip). Token estimates
+#         as integers. Formatted output with relevance tags. Timing data in
+#         $UMWELT_LOADER_TIMING_DIR/*.times (rolling window of last 10 runs).
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
@@ -327,6 +344,228 @@ estimate_total_loader_tokens() {
   echo "$total"
 }
 
+# ─── Loader Performance Timing (P1 Feature) ─────────────────
+
+UMWELT_LOADER_TIMING_DIR="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}/loader-timing"
+UMWELT_LOADER_TIMEOUT="${UMWELT_LOADER_TIMEOUT:-5}"  # seconds
+UMWELT_LOADER_SLOW_THRESHOLD="${UMWELT_LOADER_SLOW_THRESHOLD:-2}"  # seconds
+
+# Initialize timing directory
+mkdir -p "$UMWELT_LOADER_TIMING_DIR" 2>/dev/null || true
+
+# Record loader execution time
+# Usage: record_loader_timing "loader_name" duration_ms
+record_loader_timing() {
+  local loader="${1:-}"
+  local duration_ms="${2:-0}"
+
+  if [ -z "$loader" ]; then
+    return 1
+  fi
+
+  if ! [[ "$duration_ms" =~ ^[0-9]+$ ]]; then
+    duration_ms=0
+  fi
+
+  if [ ! -d "$UMWELT_LOADER_TIMING_DIR" ]; then
+    mkdir -p "$UMWELT_LOADER_TIMING_DIR" 2>/dev/null || return 1
+  fi
+
+  local timing_file="$UMWELT_LOADER_TIMING_DIR/${loader}.times"
+
+  # Keep last 10 timings (rolling window)
+  if [ -f "$timing_file" ]; then
+    local temp
+    temp=$(tail -9 "$timing_file" 2>/dev/null || echo "")
+    echo "$temp" > "$timing_file" 2>/dev/null || true
+  fi
+
+  echo "$duration_ms" >> "$timing_file" 2>/dev/null || true
+}
+
+# Get average loader execution time in milliseconds
+# Usage: avg=$(get_loader_avg_time "loader_name")
+get_loader_avg_time() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    echo "0"
+    return
+  fi
+
+  local timing_file="$UMWELT_LOADER_TIMING_DIR/${loader}.times"
+  if [ ! -f "$timing_file" ]; then
+    echo "0"
+    return
+  fi
+
+  local total=0
+  local count=0
+
+  while IFS= read -r time_ms; do
+    if [[ "$time_ms" =~ ^[0-9]+$ ]]; then
+      total=$((total + time_ms))
+      count=$((count + 1))
+    fi
+  done < "$timing_file"
+
+  if [ "$count" -eq 0 ]; then
+    echo "0"
+    return
+  fi
+
+  echo $((total / count))
+}
+
+# Check if loader is consistently slow
+# Returns 0 if slow, 1 if fast
+# Usage: is_loader_slow "loader_name"
+is_loader_slow() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    return 1
+  fi
+
+  local avg_ms
+  avg_ms=$(get_loader_avg_time "$loader")
+  if ! [[ "$avg_ms" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+
+  local threshold_ms=$((UMWELT_LOADER_SLOW_THRESHOLD * 1000))
+  if [ "$avg_ms" -ge "$threshold_ms" ]; then
+    return 0  # Slow
+  fi
+  return 1  # Fast
+}
+
+# Run loader with timing
+# Usage: output=$(run_loader_with_timing "loader_name")
+run_loader_with_timing() {
+  local loader_name="${1:-}"
+
+  if [ -z "$loader_name" ]; then
+    return 1
+  fi
+
+  local loader_path="$LOADERS_DIR/${loader_name}.sh"
+  if [ ! -f "$loader_path" ]; then
+    return 1
+  fi
+
+  # Record start time (milliseconds since epoch)
+  local start_ms
+  if date +%s%3N &>/dev/null; then
+    start_ms=$(date +%s%3N)
+  else
+    # Fallback for systems without millisecond support
+    start_ms=$(($(date +%s) * 1000))
+  fi
+
+  # Run loader with timeout
+  local output
+  local timeout_cmd=""
+
+  if command -v timeout &>/dev/null; then
+    timeout_cmd="timeout ${UMWELT_LOADER_TIMEOUT}s"
+  elif command -v gtimeout &>/dev/null; then
+    timeout_cmd="gtimeout ${UMWELT_LOADER_TIMEOUT}s"
+  fi
+
+  if [ -n "$timeout_cmd" ]; then
+    output=$($timeout_cmd "$loader_path" 2>/dev/null) || output=""
+  else
+    output=$("$loader_path" 2>/dev/null) || output=""
+  fi
+
+  # Record end time
+  local end_ms
+  if date +%s%3N &>/dev/null; then
+    end_ms=$(date +%s%3N)
+  else
+    end_ms=$(($(date +%s) * 1000))
+  fi
+
+  local duration_ms=$((end_ms - start_ms))
+  record_loader_timing "$loader_name" "$duration_ms"
+
+  echo "$output"
+}
+
+# Get loader timing report
+# Usage: get_loader_timing_report
+get_loader_timing_report() {
+  if [ ! -d "$UMWELT_LOADER_TIMING_DIR" ]; then
+    echo "No timing data available"
+    return
+  fi
+
+  echo "Loader Performance Report"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  local all_loaders="git-context docker-status test-status env-summary api-health deps-audit project-summary"
+
+  for loader in $all_loaders; do
+    local timing_file="$UMWELT_LOADER_TIMING_DIR/${loader}.times"
+    if [ ! -f "$timing_file" ]; then
+      continue
+    fi
+
+    local avg_ms
+    avg_ms=$(get_loader_avg_time "$loader")
+    if ! [[ "$avg_ms" =~ ^[0-9]+$ ]]; then
+      continue
+    fi
+
+    local avg_sec=$(echo "scale=2; $avg_ms / 1000" | bc 2>/dev/null || echo "0")
+    local status="fast"
+    if is_loader_slow "$loader"; then
+      status="SLOW"
+    fi
+
+    printf "%-18s: %6.2fs avg (%s)\n" "$loader" "$avg_sec" "$status"
+  done
+}
+
+# Skip slow loaders from a list
+# Usage: fast_loaders=$(filter_slow_loaders "loader1 loader2 loader3")
+filter_slow_loaders() {
+  local loaders="${1:-}"
+  local result=""
+
+  for loader in $loaders; do
+    if ! is_loader_slow "$loader"; then
+      result="$result $loader"
+    fi
+  done
+
+  echo "$result" | sed 's/^ //'
+}
+
+# Enhanced run with timing and slow loader skip
+# Usage: run_relevant_loaders_fast [user_message]
+run_relevant_loaders_fast() {
+  local message="${1:-}"
+  local predicted
+  predicted=$(predict_relevant_loaders "$message")
+
+  # Filter out slow loaders if we have timing data
+  local loaders_to_run
+  loaders_to_run=$(filter_slow_loaders "$predicted")
+
+  # If filtering removed everything, use at least the fastest loaders
+  if [ -z "$loaders_to_run" ]; then
+    loaders_to_run="git-context env-summary"
+  fi
+
+  for loader in $loaders_to_run; do
+    if is_loader_relevant "$loader"; then
+      local raw_output
+      raw_output=$(run_loader_with_timing "$loader")
+      format_loader_output "$loader" "$raw_output"
+    fi
+  done
+}
+
 # ─── CLI Interface ───────────────────────────────────────────
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   case "${1:-help}" in
@@ -362,6 +601,15 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       shift
       run_relevant_loaders "$*"
       ;;
+    run-fast)
+      # Run relevant loaders with timing and skip slow ones
+      shift
+      run_relevant_loaders_fast "$*"
+      ;;
+    timing-report)
+      # Show loader timing report
+      get_loader_timing_report
+      ;;
     format)
       # Format loader output
       if [ -n "${2:-}" ]; then
@@ -373,12 +621,14 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       fi
       ;;
     *)
-      echo "Usage: loader-intelligence.sh {relevant|estimate|predict|run|format} [args]" >&2
-      echo "  relevant <loader>  — check if loader would produce useful output" >&2
-      echo "  estimate <loader>  — estimate token count for loader" >&2
-      echo "  predict <message>  — predict relevant loaders for user query" >&2
-      echo "  run [message]      — run only relevant loaders" >&2
-      echo "  format <loader>    — format loader output (stdin)" >&2
+      echo "Usage: loader-intelligence.sh {relevant|estimate|predict|run|run-fast|timing-report|format} [args]" >&2
+      echo "  relevant <loader>   — check if loader would produce useful output" >&2
+      echo "  estimate <loader>   — estimate token count for loader" >&2
+      echo "  predict <message>   — predict relevant loaders for user query" >&2
+      echo "  run [message]       — run only relevant loaders" >&2
+      echo "  run-fast [message]  — run relevant loaders, skip slow ones" >&2
+      echo "  timing-report       — show loader performance statistics" >&2
+      echo "  format <loader>     — format loader output (stdin)" >&2
       exit 1
       ;;
   esac

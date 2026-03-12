@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
-# umwelt profile: review
-# Code review context — git diff, branch comparison, test status
+# ============================================================================
+# review.sh — Code review profile
+# ============================================================================
+# Purpose: Code review context profile showing git diff, branch comparison
+#          against base branch, and test status. Designed for PR reviews.
+#
 # Usage: umwelt profile review [base-branch]
+#        Default base-branch: main
+#
+# Dependencies: bash 3.2+, git, git-context, test-status loaders
+#
+# Output: Git diff with staged/unstaged changes, branch comparison showing
+#         commits ahead, files changed, and diffstat since branch diverged
+#         from base, plus last test status.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

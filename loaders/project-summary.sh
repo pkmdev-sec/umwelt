@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
-# umwelt: project-summary loader
-# High-level project overview — structure, size, tech stack, entry points
-# Usage: umwelt project-summary [--full|--json]
+# ============================================================================
+# project-summary.sh — Project summary loader
+# ============================================================================
+# Purpose: High-level project overview including directory structure, file
+#          counts by type, total size, detected tech stack, entry points,
+#          and build/config files.
+#
+# Usage: umwelt project-summary [--full|--minimal] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/project-summary.sh
+#
+# Dependencies: bash 3.2+, find, wc, du
+#
+# Output: Project root, file counts by extension (js/ts/py/go/rs/etc),
+#         total project size, detected frameworks (React/Vue/Django/etc),
+#         entry points (main files), and build tools. Respects
+#         $UMWELT_EXCLUDE_DIRS for exclusions (node_modules, .git, etc).
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

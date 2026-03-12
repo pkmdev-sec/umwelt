@@ -124,6 +124,52 @@ EXAMPLES
 
   # Generate a hook that auto-injects on every prompt:
   umwelt hook-config UserPromptSubmit dev >> ~/.claude/settings.json
+
+CUSTOMIZATION
+  Creating Custom Loaders:
+    Loaders are bash scripts in ~/.claude/umwelt/loaders/ that output context.
+    See examples/custom-loader.sh for a template.
+
+    Requirements:
+    - Executable (.sh extension)
+    - Fast execution (< 2 seconds recommended)
+    - Structured text output
+    - Clean exit (exit 0)
+
+  Creating Custom Profiles:
+    Profiles orchestrate which loaders run and in what order.
+    See examples/custom-profile.sh for a template.
+
+    Place in ~/.claude/umwelt/profiles/ and run with:
+      umwelt profile <name>
+
+  Configuration Files:
+    ~/.claude/umwelt.conf           Global configuration
+    .umweltrc                       Project-level configuration
+    .umwelt/config                  Alternative project config
+
+    Set any UMWELT_* variable. Example:
+      UMWELT_TOKEN_BUDGET=5000
+      UMWELT_PARALLEL=1
+      UMWELT_CACHE_TTL=600
+
+FILES
+  ~/.claude/umwelt/                Framework installation directory
+  ~/.claude/umwelt/loaders/        Individual context loaders
+  ~/.claude/umwelt/profiles/       Loader composition profiles
+  ~/.claude/umwelt/lib/            Core innovation libraries
+  ~/.claude/umwelt/examples/       Example custom loaders and profiles
+  ~/.claude/.bang-cache/           Cache and session state
+  ~/.claude/settings.json          Claude Code hooks configuration
+
+PROFILES
+  dev       Full development context (git + test + env + project)
+  review    Code review with diff and branch comparison
+  deploy    Pre-deployment readiness checklist
+  debug     Debugging context with logs and errors
+  minimal   Ultra-lightweight (cwd + branch only, <200 tokens)
+
+For more information, see: https://github.com/pkmdev-sec/umwelt
 EOF
 }
 
@@ -158,10 +204,37 @@ compose_loaders() {
     exit 1
   fi
 
+  echo -e "${DIM}Loader timing:${NC}" >&2
+
   for loader in "${loaders[@]}"; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
     if [ -f "$LOADER_PATH" ]; then
+      # Time the loader execution
+      local start_ms end_ms duration_ms
+      if date +%s%3N &>/dev/null 2>&1; then
+        start_ms=$(date +%s%3N)
+      else
+        start_ms=$(($(date +%s) * 1000))
+      fi
+
       "$LOADER_PATH"
+
+      if date +%s%3N &>/dev/null 2>&1; then
+        end_ms=$(date +%s%3N)
+      else
+        end_ms=$(($(date +%s) * 1000))
+      fi
+
+      duration_ms=$((end_ms - start_ms))
+      local duration_sec=$(echo "scale=2; $duration_ms / 1000" | bc 2>/dev/null || echo "0")
+
+      # Print timing with dots for alignment
+      local dots="........................"
+      local name_len=${#loader}
+      local dots_len=$((24 - name_len))
+      if [ $dots_len -lt 1 ]; then dots_len=1; fi
+      printf "${DIM}  %s %s %ss${NC}\n" "$loader" "${dots:0:$dots_len}" "$duration_sec" >&2
+
       echo ""
     else
       echo -e "${YELLOW}Warning: loader '${loader}' not found, skipping${NC}" >&2
@@ -772,10 +845,38 @@ run_event() {
 
   echo -e "${DIM}[umwelt:event-route] ${event}: running ${loaders}${NC}" >&2
 
+  # Show timing summary
+  echo -e "${DIM}Loader timing:${NC}" >&2
+
   for loader in $loaders; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
     if [ -f "$LOADER_PATH" ]; then
+      # Time the loader execution
+      local start_ms end_ms duration_ms
+      if date +%s%3N &>/dev/null 2>&1; then
+        start_ms=$(date +%s%3N)
+      else
+        start_ms=$(($(date +%s) * 1000))
+      fi
+
       "$LOADER_PATH"
+
+      if date +%s%3N &>/dev/null 2>&1; then
+        end_ms=$(date +%s%3N)
+      else
+        end_ms=$(($(date +%s) * 1000))
+      fi
+
+      duration_ms=$((end_ms - start_ms))
+      local duration_sec=$(echo "scale=2; $duration_ms / 1000" | bc 2>/dev/null || echo "0")
+
+      # Print timing with dots for alignment
+      local dots="........................"
+      local name_len=${#loader}
+      local dots_len=$((24 - name_len))
+      if [ $dots_len -lt 1 ]; then dots_len=1; fi
+      printf "${DIM}  %s %s %ss${NC}\n" "$loader" "${dots:0:$dots_len}" "$duration_sec" >&2
+
       echo ""
     fi
   done
@@ -811,11 +912,37 @@ predict_run() {
   fi
 
   echo -e "${DIM}[umwelt:predict] Running predicted loaders: ${loaders}${NC}" >&2
+  echo -e "${DIM}Loader timing:${NC}" >&2
 
   for loader in $loaders; do
     LOADER_PATH="$LOADERS_DIR/${loader}.sh"
     if [ -f "$LOADER_PATH" ]; then
+      # Time the loader execution
+      local start_ms end_ms duration_ms
+      if date +%s%3N &>/dev/null 2>&1; then
+        start_ms=$(date +%s%3N)
+      else
+        start_ms=$(($(date +%s) * 1000))
+      fi
+
       "$LOADER_PATH"
+
+      if date +%s%3N &>/dev/null 2>&1; then
+        end_ms=$(date +%s%3N)
+      else
+        end_ms=$(($(date +%s) * 1000))
+      fi
+
+      duration_ms=$((end_ms - start_ms))
+      local duration_sec=$(echo "scale=2; $duration_ms / 1000" | bc 2>/dev/null || echo "0")
+
+      # Print timing with dots for alignment
+      local dots="........................"
+      local name_len=${#loader}
+      local dots_len=$((24 - name_len))
+      if [ $dots_len -lt 1 ]; then dots_len=1; fi
+      printf "${DIM}  %s %s %ss${NC}\n" "$loader" "${dots:0:$dots_len}" "$duration_sec" >&2
+
       echo ""
     fi
   done

@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
-# umwelt: api-health loader
-# Checks health of local and configured API endpoints
-# Usage: umwelt api-health [--full|--json]
-# Config: UMWELT_LOCAL_PORTS, UMWELT_API_ENDPOINTS="url1,url2"
+# ============================================================================
+# api-health.sh — API health loader
+# ============================================================================
+# Purpose: Checks health of local development servers and configured API
+#          endpoints. Tests common ports (3000, 8000, 5173, etc.) and custom
+#          URLs for availability and response times.
+#
+# Usage: umwelt api-health [--full] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/api-health.sh
+#        Config: UMWELT_LOCAL_PORTS="3000:dev 8000:api"
+#                UMWELT_API_ENDPOINTS="http://api.example.com/health"
+#
+# Dependencies: bash 3.2+, nc or curl for port/endpoint checks
+#
+# Output: List of active ports with labels, HTTP endpoint health status
+#         (UP/DOWN), and response times. Returns "[api-health] No services
+#         detected" if no ports or endpoints are responding.
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

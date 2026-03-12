@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt: deps-audit loader
-# Quick dependency health check — outdated, vulnerabilities, lock freshness
-# Usage: umwelt deps-audit [--full|--json]
+# ============================================================================
+# deps-audit.sh — Dependency audit loader
+# ============================================================================
+# Purpose: Quick dependency health check across package managers. Reports
+#          outdated packages, known vulnerabilities, and lock file freshness
+#          for npm/pnpm/yarn, pip, cargo, bundler, and more.
+#
+# Usage: umwelt deps-audit [--full] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/deps-audit.sh
+#
+# Dependencies: bash 3.2+, npm/pip/cargo/bundle (package manager detection)
+#
+# Output: Dependency counts, outdated package list, vulnerability reports
+#         (npm audit, pip-audit, cargo audit), and lock file staleness.
+#         Returns "[deps] No dependency manifests found" if none detected.
+# ============================================================================
 set -euo pipefail
 
 # Source config and output systems

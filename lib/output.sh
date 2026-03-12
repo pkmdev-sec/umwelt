@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# umwelt: Centralized output formatting
-# Text and JSON rendering functions with jq/python3 fallback
+# ============================================================================
+# output.sh — Centralized output formatting
+# ============================================================================
+# Purpose: Provides unified text and JSON rendering functions for all loaders.
+#          Includes cache-split section markers, format detection, and jq/
+#          python3 fallback for JSON operations.
+#
+# Usage: source lib/output.sh
+#        Text functions: text_header, text_kv, text_check, text_item
+#        JSON functions: json_escape, json_build_object, json_get, json_array
+#        Cache markers: text_stable_header/footer, text_volatile_header/footer
+#
+# Dependencies: bash 3.2+, jq (optional, falls back to python3)
+#
+# Output: Formatted text or JSON depending on $UMWELT_OUTPUT_FORMAT or --json
+#         flag. Helpers for structured context with proper section delimiters.
+# ============================================================================
 set -euo pipefail
 
 # Check for jq availability

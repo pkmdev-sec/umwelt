@@ -265,6 +265,86 @@ fi
 
 echo ""
 
+# ═══ P1 Feature Tests: Learning from Past Accuracy ═══
+echo "═══ P1: Accuracy Tracking Tests ═══"
+echo ""
+
+# Setup temp accuracy dir
+export UMWELT_PREDICTOR_ACCURACY_DIR=$(mktemp -d)
+
+echo "--- record_loader_used ---"
+record_loader_used "git-context"
+record_loader_used "git-context"
+record_loader_used "test-status"
+usage=$(get_metric "git-context" 2>/dev/null || cat "$UMWELT_PREDICTOR_ACCURACY_DIR/git-context.usage" 2>/dev/null || echo "0")
+assert_eq "git-context used twice" "2" "$usage"
+
+echo "--- record_loader_predicted_unused ---"
+record_loader_predicted_unused "docker-status"
+record_loader_predicted_unused "docker-status"
+record_loader_predicted_unused "docker-status"
+misses=$(cat "$UMWELT_PREDICTOR_ACCURACY_DIR/docker-status.misses" 2>/dev/null || echo "0")
+assert_eq "docker-status 3 misses" "3" "$misses"
+
+echo "--- get_loader_accuracy ---"
+# git-context: 2 used, 0 missed = 100%
+accuracy=$(get_loader_accuracy "git-context")
+assert_eq "git-context 100% accuracy" "100" "$accuracy"
+
+# docker-status: 0 used, 3 missed = 0%
+accuracy=$(get_loader_accuracy "docker-status")
+assert_eq "docker-status 0% accuracy" "0" "$accuracy"
+
+# New loader: no data = 50% default
+accuracy=$(get_loader_accuracy "new-loader")
+assert_eq "new loader 50% default" "50" "$accuracy"
+
+echo "--- get_accuracy_boost ---"
+# High accuracy (100%) = +10 boost
+boost=$(get_accuracy_boost "git-context")
+assert_eq "high accuracy +10 boost" "10" "$boost"
+
+# Low accuracy (0%) = -10 penalty
+boost=$(get_accuracy_boost "docker-status")
+assert_eq "low accuracy -10 penalty" "-10" "$boost"
+
+# Medium accuracy (50%) = 0 boost
+boost=$(get_accuracy_boost "new-loader")
+assert_eq "medium accuracy 0 boost" "0" "$boost"
+
+echo "--- predict_needed_loaders with accuracy boost ---"
+# Set up: git-context has high accuracy, docker-status has low
+record_loader_used "git-context"
+record_loader_used "git-context"
+record_loader_predicted_unused "docker-status"
+record_loader_predicted_unused "docker-status"
+
+result=$(predict_needed_loaders "git docker status")
+# git-context should be boosted and likely appear first if tied
+TOTAL=$((TOTAL + 1))
+if echo "$result" | grep -q "git-context"; then
+  echo -e "  ${GREEN}PASS${NC} git-context predicted with boost"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} git-context should be predicted"
+  FAILED=$((FAILED + 1))
+fi
+
+echo "--- get_accuracy_report ---"
+report=$(get_accuracy_report)
+assert_contains "accuracy report has git-context" "git-context" "$report"
+assert_contains "accuracy report shows accuracy %" "accuracy" "$report"
+
+echo "--- reset_accuracy_tracking ---"
+reset_accuracy_tracking
+accuracy=$(get_loader_accuracy "git-context")
+assert_eq "after reset accuracy is default" "50" "$accuracy"
+
+# Cleanup
+rm -rf "$UMWELT_PREDICTOR_ACCURACY_DIR"
+
+echo ""
+
 # ─── Summary ────────────────────────────────────────────────
 echo "════════════════════════════════════════"
 echo -e "  Results: ${GREEN}${PASSED} passed${NC}, ${RED}${FAILED} failed${NC}, ${TOTAL} total"

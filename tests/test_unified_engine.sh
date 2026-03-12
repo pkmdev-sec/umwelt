@@ -168,6 +168,106 @@ assert_eq "CLI volatile runs without error" "0" "$?"
 reset_session_cost 2>/dev/null || true
 rm -f "$UMWELT_CACHE_DIR/stable-context"
 
+# ═══ P1 Feature Tests: Metrics Output ═══
+echo ""
+echo "═══ P1: Metrics Output Tests ═══"
+
+# Setup temp metrics
+export UMWELT_METRICS_FILE=$(mktemp)
+
+# Test 18: _init_metrics creates metrics file
+_init_metrics
+if [ -f "$UMWELT_METRICS_FILE" ]; then
+  echo "ok - _init_metrics creates metrics file"
+  PASSED=$((PASSED + 1))
+else
+  echo "not ok - metrics file should exist"
+  FAILED=$((FAILED + 1))
+fi
+
+# Test 19: get_metric returns default 0
+metric=$(get_metric "tokens_saved")
+assert_eq "initial metric is 0" "0" "$metric"
+
+# Test 20: increment_metric increases value
+increment_metric "tokens_saved" 100
+metric=$(get_metric "tokens_saved")
+assert_eq "after increment metric is 100" "100" "$metric"
+
+# Test 21: increment_metric accumulates
+increment_metric "tokens_saved" 50
+metric=$(get_metric "tokens_saved")
+assert_eq "accumulated metric is 150" "150" "$metric"
+
+# Test 22: record_tokens_saved
+record_tokens_saved 200
+metric=$(get_metric "tokens_saved")
+assert_eq "record_tokens_saved updates metric" "350" "$metric"
+
+# Test 23: record_cache_hit
+record_cache_hit
+record_cache_hit
+hits=$(get_metric "cache_hits")
+assert_eq "cache_hits is 2" "2" "$hits"
+
+# Test 24: record_cache_miss
+record_cache_miss
+misses=$(get_metric "cache_misses")
+assert_eq "cache_misses is 1" "1" "$misses"
+
+# Test 25: record_loader_skipped
+record_loader_skipped
+record_loader_skipped
+record_loader_skipped
+skipped=$(get_metric "loaders_skipped")
+assert_eq "loaders_skipped is 3" "3" "$skipped"
+
+# Test 26: record_loader_run
+record_loader_run
+record_loader_run
+runs=$(get_metric "loaders_run")
+assert_eq "loaders_run is 2" "2" "$runs"
+
+# Test 27: record_injection
+record_injection
+injections=$(get_metric "injections")
+assert_eq "injections is 1" "1" "$injections"
+
+# Test 28: get_metrics_summary generates report
+summary=$(get_metrics_summary)
+assert_match "metrics summary has header" "Metrics Summary" "$summary"
+assert_match "metrics summary has tokens saved" "Tokens saved" "$summary"
+assert_match "metrics summary has cache hit rate" "Cache hit rate" "$summary"
+
+# Test 29: compact_metrics generates single line
+compact=$(compact_metrics)
+assert_match "compact metrics has tokens saved" "tokens saved" "$compact"
+assert_match "compact metrics has cache hits" "cache hits" "$compact"
+assert_match "compact metrics has loaders skipped" "loaders skipped" "$compact"
+
+# Test 30: reset_metrics clears all
+reset_metrics
+metric=$(get_metric "tokens_saved")
+assert_eq "after reset tokens_saved is 0" "0" "$metric"
+
+# Test 31: CLI interface — metrics
+reset_metrics
+increment_metric "tokens_saved" 500
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" metrics 2>/dev/null)
+assert_match "CLI metrics works" "Metrics Summary" "$cli_output"
+
+# Test 32: CLI interface — compact-metrics
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" compact-metrics 2>/dev/null)
+assert_match "CLI compact-metrics works" "metrics:" "$cli_output"
+
+# Test 33: CLI interface — reset-metrics
+# Reset and then verify reset command runs without error
+cli_output=$("$UMWELT_DIR/lib/unified-engine.sh" reset-metrics 2>/dev/null)
+assert_match "CLI reset-metrics runs" "reset" "$cli_output"
+
+# Cleanup
+rm -f "$UMWELT_METRICS_FILE"
+
 echo ""
 echo "# Results: $PASSED passed, $FAILED failed"
 [ "$FAILED" -eq 0 ] || exit 1

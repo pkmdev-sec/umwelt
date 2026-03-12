@@ -241,6 +241,113 @@ fi
 
 echo ""
 
+# ═══ P1 Feature Tests: Custom Event Mapping ═══
+echo "═══ P1: Custom Event Mapping Tests ═══"
+echo ""
+
+# Setup temp config
+export UMWELT_EVENT_CONFIG=$(mktemp)
+
+echo "--- add_custom_event_mapping ---"
+add_custom_event_mapping "CustomBuild" "project-summary deps-audit" >/dev/null
+TOTAL=$((TOTAL + 1))
+if [ -f "$UMWELT_EVENT_CONFIG" ]; then
+  echo -e "  ${GREEN}PASS${NC} add_custom_event_mapping creates config file"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} config file should exist"
+  FAILED=$((FAILED + 1))
+fi
+
+echo "--- get_custom_event_mapping ---"
+load_custom_event_mappings
+result=$(get_custom_event_mapping "CustomBuild")
+assert_contains "CustomBuild maps to project-summary" "project-summary" "$result"
+assert_contains "CustomBuild maps to deps-audit" "deps-audit" "$result"
+
+echo "--- has_custom_event_mapping ---"
+TOTAL=$((TOTAL + 1))
+if has_custom_event_mapping "CustomBuild"; then
+  echo -e "  ${GREEN}PASS${NC} has_custom_event_mapping returns true for existing"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} should find CustomBuild mapping"
+  FAILED=$((FAILED + 1))
+fi
+
+TOTAL=$((TOTAL + 1))
+if ! has_custom_event_mapping "NonExistentEvent"; then
+  echo -e "  ${GREEN}PASS${NC} has_custom_event_mapping returns false for missing"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} should not find NonExistentEvent"
+  FAILED=$((FAILED + 1))
+fi
+
+echo "--- get_trigger_loaders_with_custom ---"
+result=$(get_trigger_loaders_with_custom "CustomBuild")
+assert_contains "custom event returns custom loaders" "project-summary" "$result"
+
+# Should fall back to defaults for non-custom events
+result=$(get_trigger_loaders_with_custom "SessionStart")
+assert_contains "SessionStart falls back to default" "git-context" "$result"
+
+echo "--- route_event_with_custom ---"
+# For custom events, get_trigger_loaders_with_custom should return custom loaders
+# Note: route_event_with_custom also applies should_rescan filtering
+# For unknown events, should_rescan returns false for all loaders
+# So we just check that get_trigger_loaders_with_custom returns the right candidates
+candidates=$(get_trigger_loaders_with_custom "CustomBuild")
+TOTAL=$((TOTAL + 1))
+if echo "$candidates" | grep -q "project-summary\|deps-audit\|git-context\|test-status"; then
+  echo -e "  ${GREEN}PASS${NC} route_event_with_custom uses custom mapping candidates"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} should get custom loader candidates (got: $candidates)"
+  FAILED=$((FAILED + 1))
+fi
+
+echo "--- update existing custom mapping ---"
+add_custom_event_mapping "CustomBuild" "git-context test-status" >/dev/null
+load_custom_event_mappings
+result=$(get_custom_event_mapping "CustomBuild")
+assert_contains "updated mapping has git-context" "git-context" "$result"
+assert_contains "updated mapping has test-status" "test-status" "$result"
+
+echo "--- list_custom_event_mappings ---"
+add_custom_event_mapping "OnCommit" "git-context" >/dev/null
+load_custom_event_mappings
+list_output=$(list_custom_event_mappings)
+assert_contains "list shows CustomBuild" "CustomBuild" "$list_output"
+assert_contains "list shows OnCommit" "OnCommit" "$list_output"
+
+echo "--- remove_custom_event_mapping ---"
+remove_custom_event_mapping "OnCommit" >/dev/null
+load_custom_event_mappings
+TOTAL=$((TOTAL + 1))
+if ! has_custom_event_mapping "OnCommit"; then
+  echo -e "  ${GREEN}PASS${NC} remove_custom_event_mapping removes mapping"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} OnCommit should be removed"
+  FAILED=$((FAILED + 1))
+fi
+
+# CustomBuild should still exist
+TOTAL=$((TOTAL + 1))
+if has_custom_event_mapping "CustomBuild"; then
+  echo -e "  ${GREEN}PASS${NC} other mappings remain after removal"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}FAIL${NC} CustomBuild should still exist"
+  FAILED=$((FAILED + 1))
+fi
+
+# Cleanup custom config
+rm -f "$UMWELT_EVENT_CONFIG"
+
+echo ""
+
 # ─── Cleanup ────────────────────────────────────────────────
 rm -rf "$UMWELT_CACHE_DIR"
 

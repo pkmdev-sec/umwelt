@@ -1,8 +1,24 @@
 #!/usr/bin/env bash
-# umwelt: Bang + Sigil Unified Context Engine (Innovation 8)
-# Combines Bang environment context with Sigil prompt templates
-# into a single optimized injection
-# Compatible with bash 3.2+ (no associative arrays)
+# ============================================================================
+# unified-engine.sh — Unified context engine (Innovation 8)
+# ============================================================================
+# Purpose: Combines Umwelt environment context with Sigil prompt templates
+#          into a single optimized injection. Assembles sections by priority,
+#          trims to token budget, tracks metrics, and coordinates with all
+#          other innovation systems (diff, cost, prediction, relevance).
+#
+# Usage: source lib/unified-engine.sh
+#        Call: assemble_unified_context [event] [user_message]
+#              assemble_unified_context_with_metrics
+#              get_metrics_summary, is_sigil_active
+#
+# Dependencies: bash 3.2+, cost-tracker, loader-intelligence, predictor, mktemp
+#
+# Output: Unified context string with Sigil template (priority 100) first,
+#         then stable sections (env, project, deps), then volatile (git, test,
+#         docker, api). Max injection: $MAX_INJECTION_TOKENS (4000 default).
+#         Metrics tracked: tokens_saved, cache_hits, loaders_skipped.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
@@ -470,11 +486,209 @@ is_sigil_active() {
   [ -n "$template" ]
 }
 
+# ─── Metrics Output (P1 Feature) ─────────────────────────────
+
+UMWELT_METRICS_FILE="${UMWELT_CACHE_DIR:-$HOME/.claude/.bang-cache}/unified-metrics"
+
+# Initialize metrics tracking
+_init_metrics() {
+  if [ ! -d "$UMWELT_CACHE_DIR" ]; then
+    mkdir -p "$UMWELT_CACHE_DIR" 2>/dev/null || return 1
+  fi
+
+  if [ ! -f "$UMWELT_METRICS_FILE" ]; then
+    echo "tokens_saved:0" > "$UMWELT_METRICS_FILE" 2>/dev/null || true
+    echo "cache_hits:0" >> "$UMWELT_METRICS_FILE" 2>/dev/null || true
+    echo "cache_misses:0" >> "$UMWELT_METRICS_FILE" 2>/dev/null || true
+    echo "loaders_skipped:0" >> "$UMWELT_METRICS_FILE" 2>/dev/null || true
+    echo "loaders_run:0" >> "$UMWELT_METRICS_FILE" 2>/dev/null || true
+    echo "injections:0" >> "$UMWELT_METRICS_FILE" 2>/dev/null || true
+  fi
+}
+
+# Get metric value
+# Usage: value=$(get_metric "metric_name")
+get_metric() {
+  local metric="${1:-}"
+  if [ -z "$metric" ]; then
+    echo "0"
+    return
+  fi
+
+  _init_metrics
+
+  if [ -f "$UMWELT_METRICS_FILE" ]; then
+    local value
+    value=$(grep "^${metric}:" "$UMWELT_METRICS_FILE" 2>/dev/null | cut -d: -f2 || echo "0")
+    if [[ "$value" =~ ^[0-9]+$ ]]; then
+      echo "$value"
+    else
+      echo "0"
+    fi
+  else
+    echo "0"
+  fi
+}
+
+# Increment metric
+# Usage: increment_metric "metric_name" [amount]
+increment_metric() {
+  local metric="${1:-}"
+  local amount="${2:-1}"
+
+  if [ -z "$metric" ]; then
+    return 1
+  fi
+
+  if ! [[ "$amount" =~ ^[0-9]+$ ]]; then
+    amount=1
+  fi
+
+  _init_metrics
+
+  local current
+  current=$(get_metric "$metric")
+  if ! [[ "$current" =~ ^[0-9]+$ ]]; then
+    current=0
+  fi
+
+  local new_value=$((current + amount))
+
+  # Update metrics file
+  if [ -f "$UMWELT_METRICS_FILE" ]; then
+    local tmpfile
+    tmpfile=$(mktemp)
+    grep -v "^${metric}:" "$UMWELT_METRICS_FILE" > "$tmpfile" 2>/dev/null || true
+    echo "${metric}:${new_value}" >> "$tmpfile"
+    mv "$tmpfile" "$UMWELT_METRICS_FILE" 2>/dev/null || true
+  fi
+}
+
+# Record tokens saved by caching/skipping
+# Usage: record_tokens_saved amount
+record_tokens_saved() {
+  local amount="${1:-0}"
+  if ! [[ "$amount" =~ ^[0-9]+$ ]]; then
+    amount=0
+  fi
+  increment_metric "tokens_saved" "$amount"
+}
+
+# Record cache hit
+# Usage: record_cache_hit
+record_cache_hit() {
+  increment_metric "cache_hits" 1
+}
+
+# Record cache miss
+# Usage: record_cache_miss
+record_cache_miss() {
+  increment_metric "cache_misses" 1
+}
+
+# Record loader skipped
+# Usage: record_loader_skipped
+record_loader_skipped() {
+  increment_metric "loaders_skipped" 1
+}
+
+# Record loader run
+# Usage: record_loader_run
+record_loader_run() {
+  increment_metric "loaders_run" 1
+}
+
+# Record injection
+# Usage: record_injection
+record_injection() {
+  increment_metric "injections" 1
+}
+
+# Get metrics summary
+# Usage: get_metrics_summary
+get_metrics_summary() {
+  _init_metrics
+
+  local tokens_saved cache_hits cache_misses loaders_skipped loaders_run injections
+
+  tokens_saved=$(get_metric "tokens_saved")
+  cache_hits=$(get_metric "cache_hits")
+  cache_misses=$(get_metric "cache_misses")
+  loaders_skipped=$(get_metric "loaders_skipped")
+  loaders_run=$(get_metric "loaders_run")
+  injections=$(get_metric "injections")
+
+  # Validate all are numeric
+  if ! [[ "$tokens_saved" =~ ^[0-9]+$ ]]; then tokens_saved=0; fi
+  if ! [[ "$cache_hits" =~ ^[0-9]+$ ]]; then cache_hits=0; fi
+  if ! [[ "$cache_misses" =~ ^[0-9]+$ ]]; then cache_misses=0; fi
+  if ! [[ "$loaders_skipped" =~ ^[0-9]+$ ]]; then loaders_skipped=0; fi
+  if ! [[ "$loaders_run" =~ ^[0-9]+$ ]]; then loaders_run=0; fi
+  if ! [[ "$injections" =~ ^[0-9]+$ ]]; then injections=0; fi
+
+  # Calculate cache hit rate
+  local total_cache=$((cache_hits + cache_misses))
+  local hit_rate=0
+  if [ "$total_cache" -gt 0 ]; then
+    hit_rate=$(( (cache_hits * 100) / total_cache ))
+  fi
+
+  echo "Umwelt Metrics Summary"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Tokens saved:      $tokens_saved"
+  echo "Cache hits:        $cache_hits"
+  echo "Cache misses:      $cache_misses"
+  echo "Cache hit rate:    ${hit_rate}%"
+  echo "Loaders run:       $loaders_run"
+  echo "Loaders skipped:   $loaders_skipped"
+  echo "Total injections:  $injections"
+
+  if [ "$loaders_skipped" -gt 0 ] && [ "$loaders_run" -gt 0 ]; then
+    local skip_rate=$(( (loaders_skipped * 100) / (loaders_skipped + loaders_run) ))
+    echo "Loader skip rate:  ${skip_rate}%"
+  fi
+}
+
+# Get compact metrics output (single line)
+# Usage: compact_metrics
+compact_metrics() {
+  local tokens_saved cache_hits loaders_skipped
+
+  tokens_saved=$(get_metric "tokens_saved")
+  cache_hits=$(get_metric "cache_hits")
+  loaders_skipped=$(get_metric "loaders_skipped")
+
+  echo "[metrics: ${tokens_saved} tokens saved, ${cache_hits} cache hits, ${loaders_skipped} loaders skipped]"
+}
+
+# Reset all metrics
+# Usage: reset_metrics
+reset_metrics() {
+  rm -f "$UMWELT_METRICS_FILE" 2>/dev/null || true
+  _init_metrics
+  echo "Metrics reset"
+}
+
+# Enhanced assemble with metrics tracking
+assemble_unified_context_with_metrics() {
+  local event_type="${1:-UserPromptSubmit}"
+  local user_message="${2:-}"
+
+  # Track injection
+  record_injection
+
+  # Call original assemble function
+  assemble_unified_context "$event_type" "$user_message"
+}
+
 # ─── CLI Interface ───────────────────────────────────────────
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   case "${1:-assemble}" in
     assemble)
       assemble_unified_context "${2:-UserPromptSubmit}" "${3:-}"
+      ;;
+    assemble-with-metrics)
+      assemble_unified_context_with_metrics "${2:-UserPromptSubmit}" "${3:-}"
       ;;
     sigil-status)
       local_template=$(get_active_sigil_template)
@@ -493,13 +707,26 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     volatile)
       get_volatile_context
       ;;
+    metrics)
+      get_metrics_summary
+      ;;
+    compact-metrics)
+      compact_metrics
+      ;;
+    reset-metrics)
+      reset_metrics
+      ;;
     *)
-      echo "Usage: unified-engine.sh {assemble|sigil-status|priority-order|stable|volatile}" >&2
-      echo "  assemble [event] [message]  — assemble unified context" >&2
-      echo "  sigil-status                — check if Sigil template is active" >&2
-      echo "  priority-order              — show section trimming priority" >&2
-      echo "  stable                      — show stable context (cached)" >&2
-      echo "  volatile                    — show volatile context (live)" >&2
+      echo "Usage: unified-engine.sh {assemble|assemble-with-metrics|sigil-status|priority-order|stable|volatile|metrics|compact-metrics|reset-metrics}" >&2
+      echo "  assemble [event] [message]       — assemble unified context" >&2
+      echo "  assemble-with-metrics [e] [m]    — assemble with metrics tracking" >&2
+      echo "  sigil-status                     — check if Sigil template is active" >&2
+      echo "  priority-order                   — show section trimming priority" >&2
+      echo "  stable                           — show stable context (cached)" >&2
+      echo "  volatile                         — show volatile context (live)" >&2
+      echo "  metrics                          — show metrics summary" >&2
+      echo "  compact-metrics                  — show compact metrics (one line)" >&2
+      echo "  reset-metrics                    — reset all metrics" >&2
       exit 1
       ;;
   esac

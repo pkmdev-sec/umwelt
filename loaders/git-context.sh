@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
-# umwelt: git-context loader
-# Outputs current git state — branch, status, recent commits, stash
-# Usage: umwelt git-context [--full|--minimal|--diff] [--json]
+# ============================================================================
+# git-context.sh — Git context loader
+# ============================================================================
+# Purpose: Outputs current git repository state including branch, status,
+#          recent commits, unstaged/staged changes, stash, and remote sync.
+#
+# Usage: umwelt git-context [--full|--minimal|--diff|--delta] [--json]
+#        Or called by profiles/unified-engine as: $LOADERS_DIR/git-context.sh
+#
+# Dependencies: bash 3.2+, git
+#
+# Output: Text or JSON with git branch, HEAD commit, staged/unstaged file
+#         counts, recent log entries, stash count, and optionally diffs.
+#         Returns early with error message if not in a git repository.
+# ============================================================================
 set -euo pipefail
 
 # Source config, cache, and output systems

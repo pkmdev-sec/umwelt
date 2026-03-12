@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# umwelt: Predictive Context Loading (Innovation 9)
-# Analyzes user message content to predict which loaders are relevant,
-# so only the needed subset runs instead of everything.
+# ============================================================================
+# predictor.sh — Predictive context loading (Innovation 9)
+# ============================================================================
+# Purpose: Analyzes user message content to predict which loaders are relevant.
+#          Uses keyword matching with weighted scoring to avoid running all
+#          loaders. Learns from past accuracy to boost/penalize loaders.
 #
-# Keyword → Loader mapping:
-#   git/branch/commit/merge/push/rebase/cherry-pick  → git-context
-#   docker/container/service/deploy/compose/k8s       → docker-status
-#   test/spec/jest/pytest/mocha/vitest/coverage        → test-status
-#   error/bug/debug/fix/crash/stack/trace              → env-summary + test-status
-#   api/endpoint/request/curl/fetch/http/rest          → api-health
-#   install/dependency/package/npm/pip/cargo/upgrade    → deps-audit
-#   build/compile/bundle/webpack/vite/esbuild          → project-summary
-#   file/struct/arch/refactor/move/rename              → project-summary
+# Usage: source lib/predictor.sh
+#        Call: predict_needed_loaders "user message" [min_score]
+#              score_loader_relevance "loader" "keywords"
+#              get_accuracy_report, record_loader_used "name"
 #
-# Usage: source this file, then call predict_needed_loaders "user message"
+# Dependencies: bash 3.2+, sort, grep
+#
+# Output: Space-separated list of loader names, ordered by relevance score
+#         (highest first). Keyword mappings:
+#         git→git-context, docker→docker-status, test→test-status,
+#         error/bug→env-summary, api→api-health, install→deps-audit,
+#         build→project-summary. Min score: $UMWELT_PREDICTOR_MIN_SCORE (20).
+# ============================================================================
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"
 
@@ -181,6 +186,13 @@ predict_needed_loaders() {
   for loader in $all_loaders; do
     local score
     score=$(score_loader_relevance "$loader" "$keywords")
+
+    # Apply learning boost from past accuracy
+    local boost
+    boost=$(get_accuracy_boost "$loader")
+    if ! [[ "$boost" =~ ^[0-9]+$ ]]; then boost=0; fi
+    score=$((score + boost))
+
     # Ensure score is numeric before comparison
     if [[ "$score" =~ ^[0-9]+$ ]] && [ "$score" -ge "$min_score" ]; then
       scored="$scored ${score}:${loader}"
@@ -200,4 +212,175 @@ predict_needed_loaders() {
     | cut -d: -f2 \
     | tr '\n' ' ' \
     | sed 's/ $//'
+}
+
+# ─── Learning from Past Accuracy (P1 Feature) ───────────────────
+
+UMWELT_PREDICTOR_ACCURACY_DIR="${UMWELT_DIFF_CACHE_DIR:-$HOME/.claude/umwelt/.cache}/predictor-accuracy"
+mkdir -p "$UMWELT_PREDICTOR_ACCURACY_DIR" 2>/dev/null || true
+
+# Record that a loader was actually used (predicted and injected)
+# Usage: record_loader_used "loader_name"
+record_loader_used() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    return 1
+  fi
+
+  if [ ! -d "$UMWELT_PREDICTOR_ACCURACY_DIR" ]; then
+    mkdir -p "$UMWELT_PREDICTOR_ACCURACY_DIR" 2>/dev/null || return 1
+  fi
+
+  local usage_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.usage"
+  local count=1
+
+  if [ -f "$usage_file" ]; then
+    local current
+    current=$(cat "$usage_file" 2>/dev/null || echo "0")
+    if [[ "$current" =~ ^[0-9]+$ ]]; then
+      count=$((current + 1))
+    fi
+  fi
+
+  echo "$count" > "$usage_file" 2>/dev/null || true
+}
+
+# Record that a loader was predicted but NOT used (wasted prediction)
+# Usage: record_loader_predicted_unused "loader_name"
+record_loader_predicted_unused() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    return 1
+  fi
+
+  if [ ! -d "$UMWELT_PREDICTOR_ACCURACY_DIR" ]; then
+    mkdir -p "$UMWELT_PREDICTOR_ACCURACY_DIR" 2>/dev/null || return 1
+  fi
+
+  local miss_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.misses"
+  local count=1
+
+  if [ -f "$miss_file" ]; then
+    local current
+    current=$(cat "$miss_file" 2>/dev/null || echo "0")
+    if [[ "$current" =~ ^[0-9]+$ ]]; then
+      count=$((current + 1))
+    fi
+  fi
+
+  echo "$count" > "$miss_file" 2>/dev/null || true
+}
+
+# Get accuracy score for a loader (used / predicted ratio)
+# Returns 0-100 (percentage)
+# Usage: accuracy=$(get_loader_accuracy "loader_name")
+get_loader_accuracy() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    echo "50"
+    return
+  fi
+
+  local usage_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.usage"
+  local miss_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.misses"
+
+  local used=0
+  local missed=0
+
+  if [ -f "$usage_file" ]; then
+    used=$(cat "$usage_file" 2>/dev/null || echo "0")
+    if ! [[ "$used" =~ ^[0-9]+$ ]]; then used=0; fi
+  fi
+
+  if [ -f "$miss_file" ]; then
+    missed=$(cat "$miss_file" 2>/dev/null || echo "0")
+    if ! [[ "$missed" =~ ^[0-9]+$ ]]; then missed=0; fi
+  fi
+
+  local total=$((used + missed))
+  if [ "$total" -eq 0 ]; then
+    echo "50"  # Default accuracy for new loaders
+    return
+  fi
+
+  local accuracy=$(( (used * 100) / total ))
+  echo "$accuracy"
+}
+
+# Get accuracy boost to apply to loader score
+# High accuracy loaders get +10, low accuracy get -10
+# Usage: boost=$(get_accuracy_boost "loader_name")
+get_accuracy_boost() {
+  local loader="${1:-}"
+  if [ -z "$loader" ]; then
+    echo "0"
+    return
+  fi
+
+  local accuracy
+  accuracy=$(get_loader_accuracy "$loader")
+  if ! [[ "$accuracy" =~ ^[0-9]+$ ]]; then
+    echo "0"
+    return
+  fi
+
+  # Boost: +10 if >75% accuracy, -10 if <25% accuracy
+  if [ "$accuracy" -ge 75 ]; then
+    echo "10"
+  elif [ "$accuracy" -le 25 ]; then
+    echo "-10"
+  else
+    echo "0"
+  fi
+}
+
+# Get accuracy report for all loaders
+# Usage: get_accuracy_report
+get_accuracy_report() {
+  if [ ! -d "$UMWELT_PREDICTOR_ACCURACY_DIR" ]; then
+    echo "No accuracy data available"
+    return
+  fi
+
+  echo "Loader Accuracy Report"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  local all_loaders="git-context docker-status test-status env-summary api-health deps-audit project-summary"
+
+  for loader in $all_loaders; do
+    local usage_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.usage"
+    local miss_file="$UMWELT_PREDICTOR_ACCURACY_DIR/${loader}.misses"
+
+    local used=0
+    local missed=0
+
+    if [ -f "$usage_file" ]; then
+      used=$(cat "$usage_file" 2>/dev/null || echo "0")
+      if ! [[ "$used" =~ ^[0-9]+$ ]]; then used=0; fi
+    fi
+
+    if [ -f "$miss_file" ]; then
+      missed=$(cat "$miss_file" 2>/dev/null || echo "0")
+      if ! [[ "$missed" =~ ^[0-9]+$ ]]; then missed=0; fi
+    fi
+
+    local total=$((used + missed))
+    if [ "$total" -eq 0 ]; then
+      continue
+    fi
+
+    local accuracy
+    accuracy=$(get_loader_accuracy "$loader")
+    local boost
+    boost=$(get_accuracy_boost "$loader")
+
+    printf "%-18s: %3d%% accuracy (%d used, %d wasted) boost: %+d\n" \
+           "$loader" "$accuracy" "$used" "$missed" "$boost"
+  done
+}
+
+# Reset all accuracy tracking
+# Usage: reset_accuracy_tracking
+reset_accuracy_tracking() {
+  rm -rf "${UMWELT_PREDICTOR_ACCURACY_DIR:?}"/* 2>/dev/null || true
 }

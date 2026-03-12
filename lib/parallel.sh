@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# umwelt: Parallel execution engine
-# Runs loaders concurrently with ordered output collection
+# ============================================================================
+# parallel.sh — Parallel execution engine
+# ============================================================================
+# Purpose: Runs multiple loaders concurrently while maintaining output order.
+#          Uses file-based semaphores for job limiting and temp files for
+#          deterministic result collection. Includes cleanup traps.
+#
+# Usage: source lib/parallel.sh
+#        Call: parallel_run "loader1 --flag" "loader2" "loader3"
+#              parallel_profile "group1_loaders" "group2_loaders"
+#
+# Dependencies: bash 3.2+, mktemp, seq
+#
+# Output: Combined stdout/stderr from all loaders in original order.
+#         Max parallel jobs: $UMWELT_MAX_PARALLEL (default: 4).
+#         Automatically falls back to sequential if UMWELT_PARALLEL != 1.
+# ============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

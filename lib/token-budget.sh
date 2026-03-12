@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
-# umwelt: Token-aware profiling (Innovation 1)
-# Estimates token usage and auto-downgrades profiles to stay within budget
+# ============================================================================
+# token-budget.sh — Token-aware profiling (Innovation 1)
+# ============================================================================
+# Purpose: Tracks cumulative token usage per session and recommends profile
+#          downgrades when budget thresholds are reached. Includes visual
+#          budget bars for terminal display.
+#
+# Usage: source lib/token-budget.sh
+#        Call: track_tokens "$text", check_token_budget, get_budget_percentage,
+#              should_downgrade "profile", visual_budget_bar [width],
+#              budget_status_with_bar
+#
+# Dependencies: bash 3.2+, date, terminal with color support (optional)
+#
+# Output: Token count estimates (chars/4 approximation), budget status,
+#         recommended profile downgrades. Visual bar with color-coded status
+#         (green <50%, cyan 50-75%, yellow 75-90%, red 90%+).
+#         Default budget: 10000 tokens, configurable via $UMWELT_TOKEN_BUDGET.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIFF_CACHE_DIR="${UMWELT_DIFF_CACHE_DIR:-$HOME/.claude/umwelt/.cache}"
@@ -182,4 +199,142 @@ budget_status_line() {
     local pct
     pct=$(get_budget_percentage)
     echo "[tokens: ${used}/${UMWELT_TOKEN_BUDGET} (${pct}% used, ${remaining} remaining)]"
+}
+
+# ─── Visual Budget Bar (P1 Feature) ─────────────────────────────
+
+# Generate a visual budget bar for terminal display
+# Usage: visual_budget_bar [width]
+visual_budget_bar() {
+    local width="${1:-40}"
+
+    # Validate width is numeric
+    if ! [[ "$width" =~ ^[0-9]+$ ]]; then
+        width=40
+    fi
+
+    local used
+    used=$(get_session_tokens)
+    local pct
+    pct=$(get_budget_percentage)
+
+    # Validate numeric values
+    if ! [[ "$used" =~ ^[0-9]+$ ]]; then used=0; fi
+    if ! [[ "$pct" =~ ^[0-9]+$ ]]; then pct=0; fi
+
+    local budget="${UMWELT_TOKEN_BUDGET:-10000}"
+    if ! [[ "$budget" =~ ^[0-9]+$ ]]; then budget=10000; fi
+
+    # Calculate filled blocks
+    local filled=$((pct * width / 100))
+    if [ "$filled" -gt "$width" ]; then filled=$width; fi
+
+    local empty=$((width - filled))
+    if [ "$empty" -lt 0 ]; then empty=0; fi
+
+    # Choose color based on usage
+    local color=""
+    local reset=""
+    if [ -t 1 ]; then
+        # Only use colors if stdout is a terminal
+        reset="\033[0m"
+        if [ "$pct" -ge 90 ]; then
+            color="\033[1;31m"  # Red (critical)
+        elif [ "$pct" -ge 75 ]; then
+            color="\033[1;33m"  # Yellow (warning)
+        elif [ "$pct" -ge 50 ]; then
+            color="\033[1;36m"  # Cyan (moderate)
+        else
+            color="\033[1;32m"  # Green (healthy)
+        fi
+    fi
+
+    # Build the bar
+    local bar=""
+    local i
+
+    # Add filled portion
+    i=0
+    while [ "$i" -lt "$filled" ]; do
+        bar="${bar}█"
+        i=$((i + 1))
+    done
+
+    # Add empty portion
+    i=0
+    while [ "$i" -lt "$empty" ]; do
+        bar="${bar}░"
+        i=$((i + 1))
+    done
+
+    # Output the formatted bar
+    printf "${color}%s${reset} %3d%% (%d/%d tokens)\n" "$bar" "$pct" "$used" "$budget"
+}
+
+# Get a compact budget bar (single line, no newline)
+# Usage: compact_budget_bar [width]
+compact_budget_bar() {
+    local width="${1:-20}"
+
+    # Validate width is numeric
+    if ! [[ "$width" =~ ^[0-9]+$ ]]; then
+        width=20
+    fi
+
+    local pct
+    pct=$(get_budget_percentage)
+
+    # Validate pct is numeric
+    if ! [[ "$pct" =~ ^[0-9]+$ ]]; then pct=0; fi
+
+    # Calculate filled blocks
+    local filled=$((pct * width / 100))
+    if [ "$filled" -gt "$width" ]; then filled=$width; fi
+
+    local empty=$((width - filled))
+    if [ "$empty" -lt 0 ]; then empty=0; fi
+
+    # Build the bar
+    local bar=""
+    local i
+
+    i=0
+    while [ "$i" -lt "$filled" ]; do
+        bar="${bar}█"
+        i=$((i + 1))
+    done
+
+    i=0
+    while [ "$i" -lt "$empty" ]; do
+        bar="${bar}░"
+        i=$((i + 1))
+    done
+
+    printf "[%s] %3d%%" "$bar" "$pct"
+}
+
+# Get budget status with visual bar
+# Usage: budget_status_with_bar [width]
+budget_status_with_bar() {
+    local width="${1:-40}"
+
+    echo "Token Budget Status"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    visual_budget_bar "$width"
+    echo ""
+    budget_status_line
+    echo ""
+
+    # Add recommendation if budget is constrained
+    local pct
+    pct=$(get_budget_percentage)
+    if ! [[ "$pct" =~ ^[0-9]+$ ]]; then pct=0; fi
+
+    if [ "$pct" -ge 90 ]; then
+        echo "⚠️  WARNING: Budget nearly exhausted! Consider using 'silent' profile."
+    elif [ "$pct" -ge 75 ]; then
+        echo "⚡ NOTICE: Budget at 75%+, switching to 'minimal' profile recommended."
+    elif [ "$pct" -ge 50 ]; then
+        echo "ℹ️  INFO: Budget at 50%+, consider lighter profiles if needed."
+    fi
 }

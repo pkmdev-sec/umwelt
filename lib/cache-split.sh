@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# umwelt: Cache-friendly output splitter (Innovation 2)
-# Splits context into STABLE (cached) and VOLATILE (always fresh) sections
+# ============================================================================
+# cache-split.sh — Cache-friendly output splitter (Innovation 2)
+# ============================================================================
+# Purpose: Splits context into STABLE (cached) and VOLATILE (always fresh)
+#          sections to enable Claude Code prompt caching optimizations.
+#
+# Usage: source lib/cache-split.sh
+#        Then call: format_cached_output, format_stable_context,
+#                   format_volatile_context, or reset_cache_split
+#
+# Dependencies: bash 3.2+, git (optional for git status)
+#
+# Output: STABLE context (OS, shell, runtimes, package managers) is cached
+#         on first call. VOLATILE context (git status, load, ports) is
+#         computed fresh each time. On first call, outputs both; subsequent
+#         calls only output VOLATILE if changed.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

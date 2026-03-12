@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt profile: dev
-# Full development context — git state, tests, environment, project overview
+# ============================================================================
+# dev.sh — Development profile
+# ============================================================================
+# Purpose: Full development context profile combining git state, test status,
+#          environment summary, and project overview. Optimized for active
+#          development sessions with parallel loader execution.
+#
 # Usage: umwelt profile dev [--full|--minimal]
+#        Minimal mode runs git-context + project-summary only (fast).
+#
+# Dependencies: bash 3.2+, parallel.sh, git-context, test-status,
+#               env-summary, project-summary loaders
+#
+# Output: Parallel execution of 4 loaders (git-context, test-status,
+#         env-summary, project-summary) with combined formatted output.
+# ============================================================================
 set -euo pipefail
 
 UMWELT_DIR="${UMWELT_DIR:-$HOME/.claude/umwelt}"

@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# umwelt: Configuration system
-# Merges defaults → global → workspace → project configs
-# Config files: ~/.claude/umwelt.conf, .umweltrc, .umwelt/config
+# ============================================================================
+# config.sh — Configuration system with cascading priority
+# ============================================================================
+# Purpose: Loads and merges configuration from multiple sources following
+#          precedence: defaults → global → workspace → project → env vars.
+#          Provides config access, caching utilities, and JSON helpers.
+#
+# Usage: source lib/config.sh (auto-loads on source)
+#        Access via: $UMWELT_* variables, cache_get/set/invalidate,
+#                    json_escape_string, show_config
+#
+# Dependencies: bash 3.2+, jq (optional, falls back to python3), md5/md5sum
+#
+# Output: Exports UMWELT_* environment variables with merged configuration.
+#         Config files: ~/.claude/umwelt.conf, .umweltrc, .umwelt/config
+# ============================================================================
 set -euo pipefail
 
 # ─── Config Defaults ────────────────────────────────────────────
